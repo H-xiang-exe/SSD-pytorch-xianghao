@@ -1,15 +1,12 @@
 import os
 
 import argparse
-from pickletools import optimize
 import torch
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import visdom
 
-from data import coco
-from data import voc0712
-from data import config
+from SSD.data import config, coco, voc0712
 from ssd import build_ssd
 
 
