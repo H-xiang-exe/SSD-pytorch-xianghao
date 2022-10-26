@@ -4,10 +4,10 @@ import argparse
 import torch
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
-import visdom
+# import visdom
 
-from SSD.data import config, coco, voc0712
-from ssd import build_ssd
+from xhssd.data import config, coco, voc0712
+from xhssd.ssd import build_ssd
 
 
 def str2bool(v):
@@ -53,22 +53,22 @@ def train():
         cfg = config.voc
         dataset = voc0712.VOCDetection()
 
-    if args.visdom:
-        viz = visdom.Visdom()
+    # if args.visdom:
+    #     viz = visdom.Visdom()
 
-    ssd_net = build_ssd()
-    net = ssd_net
+    # ssd_net = build_ssd()
+    # net = ssd_net
 
-    if args.cuda:
-        net = torch.nn.DataParallel(net)
-        cudnn.benchmark = True
+    # if args.cuda:
+    #     net = torch.nn.DataParallel(net)
+    #     cudnn.benchmark = True
+    #
+    # if args.cuda:
+    #     net.cuda()
 
-    if args.cuda:
-        net.cuda()
-
-    optimizer = optim.SGD(net.parameters(), lr=args.lr,
-                          momentum=args.momentum, weight_decay=args.weight_decay)
-    citerion = MultiBoxLoss()
+    # optimizer = optim.SGD(net.parameters(), lr=args.lr,
+    #                       momentum=args.momentum, weight_decay=args.weight_decay)
+    # citerion = MultiBoxLoss()
 
     # prepare dataloader
 
@@ -79,7 +79,7 @@ def train():
     # ---------------------------------
 
 
-    net.train()
+    # net.train()
 
 
 
