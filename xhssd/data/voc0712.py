@@ -49,4 +49,5 @@ class VOCDetection(data.Dataset):
                     self.ids.append((root_path, line.strip()))
 
 if __name__ == "__main__":
-    voc = VOCDetection("/home2/xianghao/")
+    voc = VOCDetection("/home2/xianghao/data/VOCdevkit")
+    print(voc.ids[0])
