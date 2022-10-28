@@ -4,7 +4,7 @@
 
 start=`date +%s`
 
-HOME_DIR=/home2/xianghao
+HOME_DIR=/home/xianghao
 if [ -z "$1" ]; then
   # navigate to HOME_DIR/data
   echo "navigating to $HOME_DIR/data/ ..."

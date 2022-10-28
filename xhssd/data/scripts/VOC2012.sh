@@ -1,6 +1,6 @@
 #!/bin/bash
 
-HOME_DIR=/home2/xianghao
+HOME_DIR=/home/xianghao
 start=`date +%s`
 
 if [ -z "$1" ]; then
