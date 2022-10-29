@@ -4,6 +4,7 @@ import argparse
 import torch
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
+from torch.utils.data import DataLoader
 # import visdom
 
 from xhssd.data import config, coco, voc0712
@@ -84,4 +85,15 @@ def train():
 
 
 if __name__ == "__main__":
+    # ---------------------
+    # 准备数据集
+    training_data = voc0712.VOCDataset()
+    test_data = voc0712.VOCDataset()
+    # ---------------------
+
+    # ---------------------
+    # Dataloader
+    train_dataloader = DataLoader(training_data)
+    test_dataloader = DataLoader(test_data)
+    # ---------------------
     train()
