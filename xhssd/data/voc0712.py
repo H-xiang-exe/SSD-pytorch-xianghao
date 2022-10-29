@@ -42,6 +42,16 @@ class VOCAnnotationTransform(object):
             boxes.append(bndbox)
         return boxes
 
+class ImageTransform(object):
+    def __init__(self):
+        super(ImageTransform, self).__init__()
+        # 图像转换成RGB图像
+
+        # 获得图像的高和宽
+
+    def __call__(self, img, boxes, labels):
+        pass
+        
 
 class VOCDataset(Dataset):
     """输入数据集名字，输出处理好的数据"""
