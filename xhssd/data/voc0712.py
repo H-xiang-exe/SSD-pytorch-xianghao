@@ -90,7 +90,7 @@ class VOCDataset(Dataset):
     def pull_item(self, idx):
         img_id = self.img_list[idx]
         target_annotation = ET.parse(self.annotation_path % img_id).getroot()
-        img = cv2.imread(self.img_path % img_id)
+        img = cv2.imread(self.img_path % img_id) # (height, Width, 'BGR')
         height, width, channels = img.shape
         # print(img_id)
 
