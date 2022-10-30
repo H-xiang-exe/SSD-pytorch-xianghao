@@ -16,12 +16,8 @@ class Compose(object):
         self.transforms = transforms
 
     def __call__(self, img, boxes=None, labels=None):
-        # print(img, boxes, labels)
         for t in self.transforms:
-            print(t)
-            tmp = t(img, boxes, labels)
-            print(len(tmp))
-            img, boxes, labels = tmp
+            img, boxes, labels = t(img, boxes, labels)
         return img, boxes, labels
 
 
@@ -41,12 +37,14 @@ class ToPersentCoords(object):
         Args:
             boxes(ndarray): (nums, 4), 4 means [xmin, ymin, xmax, ymax]
         """
+        boxes = np.array(boxes, dtype='float32')
         height, width, channels = image.shape
         boxes[:, 0] /= width
         boxes[:, 1] /= height
         boxes[:, 2] /= width
         boxes[:, 3] /= height
         return image, boxes, labels
+
 
 # ---------------------------------------- 针对像素的数据增强: Begin ----------------------------------------
 
@@ -156,7 +154,7 @@ class RandomLightingNoise:
             swap = self.perms[np.random.randint(len(self.perms))]
             shuffle = SwapChannels(swap)
             image = shuffle(image)
-        return image
+        return image, boxes, labels
 
 
 class PhotometricDistort(object):
@@ -266,31 +264,32 @@ def iou(boxes_a, box_b):
         box_b: a box with size of (4)
     """
     inter = intersect(boxes_a, box_b)
-    area_a = (boxes_a[:, 2] - boxes_a[:, 0])*(boxes_a[:, 3] - boxes_a[:, 1])
+    area_a = (boxes_a[:, 2] - boxes_a[:, 0]) * (boxes_a[:, 3] - boxes_a[:, 1])
     area_b = (box_b[2] - box_b[0]) * (box_b[3] - box_b[1])
 
     union = area_a + area_b - inter
-    return inter/union
+    return inter / union
 
 
 class RandomSampleCrop(object):
     """随机裁剪：随机裁掉原图中的一部分， 然后检查边界框或者目标整体是否被裁掉，如果目标整体被裁掉，则舍弃这次随机过程"""
 
     def __init__(self):
-        self.sample_options = {
+        self.sample_options = (
+            # using entire original image
             None,
             (0.1, None),
             (0.3, None),
             (0.7, None),
             (0.9, None),
             (None, None)
-        }
+        )
 
     def __call__(self, image, boxes=None, labels=None):
         height, width, _ = image.shape
         while True:
             # 随机选取一种裁剪方式
-            mod = random.choice(self.sample_options)
+            mod = np.random.choice(self.sample_options)
             if mod is None:
                 return image, boxes, labels
             # 最小Iou和最大IoU
@@ -400,14 +399,15 @@ class SSDAugmentation(object):
 
 if __name__ == '__main__':
     image = np.random.randint(0, 255, (300, 300, 3))
-    boxes = np.array([[45, 56, 223, 256], [23, 78, 234, 234]])
+    boxes = np.array([[0.1, 0.2, 0.8, 0.4], [0.2, 0.3, 0.5, 0.9]])
     labels = np.array([3, 2])
-    # from matplotlib import pyplot as plt
-    # plt.subplot(121)
-    # plt.imshow(image)
+    from matplotlib import pyplot as plt
+
+    plt.subplot(121)
+    plt.imshow(image)
     augument = SSDAugmentation()
     image, boxes, labels = augument(image, boxes, labels)
-    # plt.subplot(122)
-    # plt.imshow(image)
-    # plt.show()
-    # print(image)
+    plt.subplot(122)
+    plt.imshow(image)
+    plt.show()
+    print(image)
