@@ -208,18 +208,110 @@ class Expand(object):
             top = np.random.uniform(0, height * factor - height)  # 原图最顶部的位置在放大后图像中的坐标
             # 扩大后的图片维度
             expand_image = np.zeros((int(height * factor), int(width * factor), depth), dtype=image.dtype)
-            expand_image[:,:,:] = self.mean
-            expand_image[int(top): int(top+height), int(left):int(left + width)] = image
+            expand_image[:, :, :] = self.mean
+            expand_image[int(top): int(top + height), int(left):int(left + width)] = image
 
             # 返回缩放后的图像
             image = expand_image
 
             # 重新修改边界框位置
             boxes = boxes.copy()
-            boxes[:, :2] += (int(left), int(top)) # [xmin, ymin]
-            boxes[:, 2:] += (int(left), int (top)) # [xmax, ymax]
+            boxes[:, :2] += (int(left), int(top))  # [xmin, ymin]
+            boxes[:, 2:] += (int(left), int(top))  # [xmax, ymax]
 
         return image, boxes, labels
+
+
+def intersect(boxes_a, box_b):
+    """求解boxes_a中每个box和box_b的交叠的面积
+    Args:
+        boxes_a: Multiple boxes with size of (nums, 4), 4 means [xmin, ymin, xmax, ymax]
+        box_b: a box with size of (4)
+    """
+    max_xy = np.minimum(boxes_a[:, 2:], box_b[2:])
+    min_xy = np.maximum(boxes_a[:, :2], box_b[:2])
+    inter = np.clip((max_xy - min_xy), a_min=0, a_max=np.inf)
+    return inter[:, 0] * inter[:, 1]
+
+
+def iou(boxes_a, box_b):
+    """求解boxes_a中每个box和box_b的IoU
+    Args:
+        boxes_a: Multiple boxes with size of (nums, 4), 4 means [xmin, ymin, xmax, ymax]
+        box_b: a box with size of (4)
+    """
+    inter = intersect(boxes_a, box_b)
+    area_a = (boxes_a[:, 2] - boxes_a[:, 0])*(boxes_a[:, 3] - boxes_a[:, 1])
+    area_b = (box_b[2] - box_b[0]) * (box_b[3] - box_b[1])
+
+    union = area_a + area_b - inter
+    return inter/union
+
+class RandomSampleCrop(object):
+    """随机裁剪：随机裁掉原图中的一部分， 然后检查边界框或者目标整体是否被裁掉，如果目标整体被裁掉，则舍弃这次随机过程"""
+
+    def __init__(self):
+        self.sample_options = {
+            None,
+            (0.1, None),
+            (0.3, None),
+            (0.7, None),
+            (0.9, None),
+            (None, None)
+        }
+
+    def __call__(self, image, boxes=None, labels=None):
+        height, width, _ = image.shape
+        while True:
+            # 随机选取一种裁剪方式
+            mod = random.choice(self.sample_options)
+            if mod is None:
+                return image, boxes, labels
+            # 最小Iou和最大IoU
+            min_iou, max_iou = mod
+            if min_iou is None:
+                min_iou = float('-inf')
+            if max_iou is None:
+                max_iou = float('inf')
+
+            # 迭代50次
+            for _ in range(50):
+                current_img = image
+                # 宽高随机采样
+                w = np.random.uniform(0.3 * width, width)
+                h = np.random.uniform(0.3 * height, height)
+
+                # 对于宽高比例不当的舍弃采样
+                if h / w < 0.5 or h / w > 2:
+                    continue
+
+                # 确定宽高之后，对于图像的原点位置进行采样
+                left = np.random.uniform(0, width - w)
+                top = np.random.uniform(0, height - h)
+
+                # 由此确定图像所在坐标
+                rect = np.array([int(left), int(top), int(left + w), int(top + h)])
+                # 求解原始的boxes和新的图像的IoU
+                overlap = iou(boxes, rect)
+
+                if overlap.min() < min_iou and overlap.max() > max_iou:
+                    continue
+
+                # box中心点坐标
+                center = (boxes[:, :2] + boxes[:, 2:]) / 2.0
+                m1 = (rect[0] < center[:, 0]) * (rect[1] < center[:, 1])
+                m2 = (rect[2] > center[:, 0]) * (rect[3] < center[:, 1])
+                # m1 m2均为正时保留
+                mask = m1 * m2
+                if not mask.any():  # any表示任意一个元素为true，则结果为true
+                    continue
+                # 将中心点不在裁剪后图像范围的box去掉
+                current_boxes = boxes[mask, :].copy()
+                current_labels = labels[mask]
+                # 对于中心点在裁剪后图像区域的box的边界重新设定，原边界有可能超出了裁剪后图像区域
+                current_boxes[:, :2] = np.maximum(current_boxes[:, :2], rect[:2]) - rect[:2]
+                current_boxes[:, 2:] = np.minimum(current_boxes[:, 2:], rect[2:]) - rect[:2]
+                return current_img, current_boxes, current_labels
 
 
 # ---------------------------------------- 针对图像的数据增强：End ----------------------------------------
