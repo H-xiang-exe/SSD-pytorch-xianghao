@@ -398,16 +398,23 @@ class SSDAugmentation(object):
 
 
 if __name__ == '__main__':
-    image = np.random.randint(0, 255, (300, 300, 3))
-    boxes = np.array([[0.1, 0.2, 0.8, 0.4], [0.2, 0.3, 0.5, 0.9]])
-    labels = np.array([3, 2])
-    from matplotlib import pyplot as plt
+    img_path = "../../SampleDataset/000012.jpg"
+    image = cv2.imread(img_path)
+    cv2.imshow('car', image)
+    boxes = np.array([[156, 97, 351, 270]], dtype=np.float32)
+    height, width, channels = image.shape
+    # print(height, width)
+    boxes[:,::2] /= width
+    boxes[:,1::2] /= height
+    # print(boxes)
+    labels = np.array([3])
+    # from matplotlib import pyplot as plt
 
-    plt.subplot(121)
-    plt.imshow(image)
-    augument = SSDAugmentation()
-    image, boxes, labels = augument(image, boxes, labels)
-    plt.subplot(122)
-    plt.imshow(image)
-    plt.show()
-    print(image)
+    # plt.subplot(121)
+    # plt.imshow(image.astype('uint8'))
+    # augument = SSDAugmentation()
+    # image, boxes, labels = augument(image, boxes, labels)
+    # # plt.subplot(122)
+    # # plt.imshow(image)
+    # # plt.show()
+    # # print(image)
