@@ -400,21 +400,22 @@ class SSDAugmentation(object):
 if __name__ == '__main__':
     img_path = "../../SampleDataset/000012.jpg"
     image = cv2.imread(img_path)
-    cv2.imshow('car', image)
+    # print(image)
     boxes = np.array([[156, 97, 351, 270]], dtype=np.float32)
     height, width, channels = image.shape
-    # print(height, width)
-    boxes[:,::2] /= width
-    boxes[:,1::2] /= height
+    print(height, width)
+    boxes[:, ::2] /= width
+    boxes[:, 1::2] /= height
     # print(boxes)
     labels = np.array([3])
-    # from matplotlib import pyplot as plt
-
-    # plt.subplot(121)
-    # plt.imshow(image.astype('uint8'))
-    # augument = SSDAugmentation()
-    # image, boxes, labels = augument(image, boxes, labels)
-    # # plt.subplot(122)
-    # # plt.imshow(image)
-    # # plt.show()
-    # # print(image)
+    from matplotlib import pyplot as plt
+    plt.figure()
+    plt.subplot(121)
+    plt.imshow(image)
+    augument = SSDAugmentation()
+    image, boxes, labels = augument(image, boxes, labels)
+    cv2.imshow('image', image) # BGR
+    cv2.waitKey(0)
+    plt.subplot(122) # RGB
+    plt.imshow(image)
+    plt.show()

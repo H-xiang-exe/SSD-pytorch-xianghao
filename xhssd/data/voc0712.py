@@ -1,5 +1,7 @@
 from email.mime import image
 from logging import root
+
+import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 import os
@@ -11,6 +13,7 @@ import xml.etree.ElementTree as ET  # 一种灵活的容器对象，用于在内
 
 class VOCAnnotationTransform(object):
     """用于对Annotation中的box坐标和分类进行归一化并返回[[xmin, ymin, xmax, ymax, cls_id], ...]"""
+
     def __call__(self, img_annotation, classes, width, height):
         """
         Args:
@@ -42,16 +45,6 @@ class VOCAnnotationTransform(object):
             boxes.append(bndbox)
         return boxes
 
-class ImageTransform(object):
-    def __init__(self):
-        super(ImageTransform, self).__init__()
-        # 图像转换成RGB图像
-
-        # 获得图像的高和宽
-
-    def __call__(self, img, boxes, labels):
-        pass
-        
 
 class VOCDataset(Dataset):
     """输入数据集名字，输出处理好的数据"""
@@ -85,21 +78,31 @@ class VOCDataset(Dataset):
         return len(self.img_list)
 
     def __getitem__(self, idx):
-        pass
+        """
+        img: size of (height, width, 3), 3-> BGR
+        gt(boxes): size of (num_box, 5), 5-> [xmin, ymin, xmax, ymax, label]
+        """
+        img, gt, h, w = self.pull_item(idx)
 
     def pull_item(self, idx):
         img_id = self.img_list[idx]
-        target_annotation = ET.parse(self.annotation_path % img_id).getroot()
-        img = cv2.imread(self.img_path % img_id) # (height, Width, 'BGR')
+        target = ET.parse(self.annotation_path % img_id).getroot()
+        img = cv2.imread(self.img_path % img_id)  # (height, Width, 'BGR')
         height, width, channels = img.shape
         # print(img_id)
 
-
         if self.target_transform is not None:
-            target_annotation = self.target_transform(target_annotation, self.classes, width, height)
+            target = self.target_transform(target, self.classes, width,
+                                           height)  # [[xmin, ymin, xmax, ymax, label], ...]
 
         if self.transform is not None:
-            pass
+            target = np.array(target)
+            img, boxes, labels = self.transform(img, target[:, :4], target[:, 4])  # 对图片进行数据增强同时改变其对应的box坐标和label值
+            # 图片由opencv读取，现在通道顺序是：BGR，现在需要转换成RGB
+            img = img[:, :, (2, 1, 0)]
+            # boxes: (num_box, 4), labels: (num_box) --> labels: (num_box, 1) --> cat(boxes, labels): (num_box, 5)
+            target = np.hstack([boxes, np.expand_dims(labels, axis=1)])
+        return torch.from_numpy(img).permute(2, 0, 1), target, height, width
 
 
 if __name__ == "__main__":
