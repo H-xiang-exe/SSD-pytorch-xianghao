@@ -4,6 +4,7 @@ import random
 
 import numpy as np
 import cv2
+import random
 
 
 class Compose(object):
@@ -277,7 +278,7 @@ class RandomSampleCrop(object):
     def __init__(self):
         self.sample_options = (
             # using entire original image
-            None,
+            # None,
             (0.1, None),
             (0.3, None),
             (0.7, None),
@@ -289,7 +290,7 @@ class RandomSampleCrop(object):
         height, width, _ = image.shape
         while True:
             # 随机选取一种裁剪方式
-            mod = np.random.choice(self.sample_options)
+            mod = random.choice(self.sample_options)
             if mod is None:
                 return image, boxes, labels
             # 最小Iou和最大IoU
@@ -398,7 +399,7 @@ class SSDAugmentation(object):
 
 
 if __name__ == '__main__':
-    img_path = "../../SampleDataset/000012.jpg"
+    img_path = "../../batchdata/VOCdevkit/VOC2007/JPEGImages/000012.jpg"
     image = cv2.imread(img_path)
     # print(image)
     boxes = np.array([[156, 97, 351, 270]], dtype=np.float32)
@@ -408,14 +409,14 @@ if __name__ == '__main__':
     boxes[:, 1::2] /= height
     # print(boxes)
     labels = np.array([3])
-    from matplotlib import pyplot as plt
-    plt.figure()
-    plt.subplot(121)
-    plt.imshow(image)
+    # from matplotlib import pyplot as plt
+    # plt.figure()
+    # plt.subplot(121)
+    # plt.imshow(image)
     augument = SSDAugmentation()
     image, boxes, labels = augument(image, boxes, labels)
-    cv2.imshow('image', image) # BGR
-    cv2.waitKey(0)
-    plt.subplot(122) # RGB
-    plt.imshow(image)
-    plt.show()
+    # cv2.imshow('image', image) # BGR
+    # cv2.waitKey(0)
+    # plt.subplot(122) # RGB
+    # plt.imshow(image)
+    # plt.show()
