@@ -101,7 +101,7 @@ class VOCDataset(Dataset):
             img = img[:, :, (2, 1, 0)]
             # boxes: (num_box, 4), labels: (num_box) --> labels: (num_box, 1) --> cat(boxes, labels): (num_box, 5)
             target = np.hstack([boxes, np.expand_dims(labels, axis=1)])
-        return torch.from_numpy(img).permute(2, 0, 1), target, height, width
+        return torch.from_numpy(img).permute(2, 0, 1), target, height, width  # 输出图片仍然是BGR
 
     def pull_image(self, idx):
         """根据idx获得数据集中的原图(不经过transform)，形式为PIL
@@ -112,7 +112,7 @@ class VOCDataset(Dataset):
             PIL img
         """
         image_id = self.img_list[idx]
-        return cv2.imread(self.img_path % image_id, cv2.IMREAD_COLOR) # 这里以openCV读取，并非PIL
+        return cv2.imread(self.img_path % image_id, cv2.IMREAD_COLOR)  # 这里以openCV读取，并非PIL
 
     def pull_anno(self, idx):
         """根据idx获得图片对应的annotation
@@ -125,8 +125,10 @@ class VOCDataset(Dataset):
         img_id = self.img_list[idx]
         anno = ET.parse(self.annotation_path % img_id).getroot()
         # 获得box坐标（不做归一化）
-        gt = self.target_transform(anno, self.classes, 1, 1) # ([xmin, ymin, xmax, ymax, cls], ...)
-        return img_id[1], gt
+        gt = self.target_transform(anno, self.classes, 1, 1)  # ([xmin, ymin, xmax, ymax, cls], ...)
+        return img_id, gt
+
+
 if __name__ == "__main__":
     from xhssd.utils import augmentations
 

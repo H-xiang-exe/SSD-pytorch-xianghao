@@ -399,17 +399,17 @@ class SSDAugmentation(object):
 
 
 class BaseTransform(object):
-    """用于测试集数据处理"""
+    """用于测试集数据处理：Resize+SubstractMean"""
 
     def __init__(self, size=(300, 300), mean=(104, 117, 123)):
         self.size = size
         self.mean = mean
 
     def __call__(self, image, boxes=None, labels=None):
-        x = cv2.resize(image, (self.size, self.size)).astype(np.float32)
+        x = cv2.resize(image, self.size).astype(np.float32)
         x -= self.mean
         x = x.astype(np.float32)
-        return x
+        return x, boxes, labels
 
 
 if __name__ == '__main__':
