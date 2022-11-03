@@ -398,6 +398,20 @@ class SSDAugmentation(object):
         return self.augment(image, boxes, labels)
 
 
+class BaseTransform(object):
+    """用于测试集数据处理"""
+
+    def __init__(self, size=(300, 300), mean=(104, 117, 123)):
+        self.size = size
+        self.mean = mean
+
+    def __call__(self, image, boxes=None, labels=None):
+        x = cv2.resize(image, (self.size, self.size)).astype(np.float32)
+        x -= self.mean
+        x = x.astype(np.float32)
+        return x
+
+
 if __name__ == '__main__':
     img_path = "../../batchdata/VOCdevkit/VOC2007/JPEGImages/000012.jpg"
     image = cv2.imread(img_path)
@@ -409,14 +423,22 @@ if __name__ == '__main__':
     boxes[:, 1::2] /= height
     # print(boxes)
     labels = np.array([3])
-    # from matplotlib import pyplot as plt
-    # plt.figure()
-    # plt.subplot(121)
-    # plt.imshow(image)
+    from matplotlib import pyplot as plt
+
+    plt.figure()
+    plt.subplot(121)
+    plt.imshow(image)
     augument = SSDAugmentation()
     image, boxes, labels = augument(image, boxes, labels)
-    # cv2.imshow('image', image) # BGR
-    # cv2.waitKey(0)
-    # plt.subplot(122) # RGB
-    # plt.imshow(image)
-    # plt.show()
+    cv2.imshow('image', image)  # BGR
+    cv2.waitKey(0)
+    tmp = []
+    for h in range(image.shape[0]):
+        for w in range(image.shape[1]):
+            b, g, r = image[h][w]
+            if b > 0 or g > 0 or r > 0:
+                tmp.append([h, w, b, g, r])
+    print(tmp)
+    plt.subplot(122)  # RGB
+    plt.imshow(image)
+    plt.show()

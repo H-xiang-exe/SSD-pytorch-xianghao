@@ -3,9 +3,7 @@ from logging import root
 
 import torch
 from torch.utils.data import Dataset
-from torchvision import transforms
 import os
-
 import cv2
 import numpy as np
 import xml.etree.ElementTree as ET  # 一种灵活的容器对象，用于在内存中存储结构化数据
@@ -53,13 +51,14 @@ class VOCDataset(Dataset):
         """Handle the VOC annotation
         Args:
             root(str): file path to VOCdevkit
+            image_dataset(tuple[str]): eg. ('2007', 'train'), ('2007', 'test'), ('2007', 'trainval')
         """
         super(VOCDataset, self).__init__()
         self.classes = (
             "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", "dog",
             "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"
         )
-        image_dataset = ('2007', 'train')
+        assert image_dataset is not None, f'image dataset is None, needs parameter: image_dataset'
         self.transform = transform
         self.target_transform = target_transform
 
@@ -104,7 +103,33 @@ class VOCDataset(Dataset):
             target = np.hstack([boxes, np.expand_dims(labels, axis=1)])
         return torch.from_numpy(img).permute(2, 0, 1), target, height, width
 
+    def pull_image(self, idx):
+        """根据idx获得数据集中的原图(不经过transform)，形式为PIL
+        这里不直接使用pull_item()的原因是不希望经过tranform
+        Args:
+             idx(int): index of image to show
+        Return:
+            PIL img
+        """
+        image_id = self.img_list[idx]
+        return cv2.imread(self.img_path % image_id, cv2.IMREAD_COLOR) # 这里以openCV读取，并非PIL
 
+    def pull_anno(self, idx):
+        """根据idx获得图片对应的annotation
+        Args:
+            idx(int): index of image
+        Return:
+            list: [img_id, [(label, bbox coords), ...]
+            eg. ('001718', [('dog', (96, 13, 438, 332)), ...]
+        """
+        img_id = self.img_list[idx]
+        anno = ET.parse(self.annotation_path % img_id).getroot()
+        # 获得box坐标（不做归一化）
+        gt = self.target_transform(anno, self.classes, 1, 1) # ([xmin, ymin, xmax, ymax, cls], ...)
+        return img_id[1], gt
 if __name__ == "__main__":
-    voc = VOCDataset("/root/autodl-tmp/data/VOCdevkit")
-    voc.pull_item(1)
+    from xhssd.utils import augmentations
+
+    voc = VOCDataset("..\\..\\batchdata\\VOCdevkit", ('2007', 'train'), transform=augmentations.SSDAugmentation())
+    # voc.pull_image(1)
+    voc.pull_anno(1)
