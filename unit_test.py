@@ -1,6 +1,6 @@
 import torch
 from torchsummary import summary
-import xhssd.ssd as ssd
+import xhssd.ssd300_vgg16 as ssd
 from thop import profile
 
 net = ssd.build_ssd('train')

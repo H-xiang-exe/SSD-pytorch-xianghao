@@ -2,7 +2,7 @@ import torch
 
 from xhssd.data import voc0712
 from xhssd.utils import augmentations
-from xhssd import ssd
+from xhssd import ssd300_vgg16
 from torch.autograd import Variable
 
 

@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 from itertools import product
 from math import sqrt
 
+import torch
+
 
 class PriorAnchor(object):
     def __init__(self, input_shape):
@@ -107,15 +109,17 @@ class PriorAnchor(object):
             #     ax.add_patch(rect4)
             #
             #     plt.show()
-
             # 将先验框变成小数模式
             # 归一化
             anchor_boxes[:, ::2] /= self.img_width
             anchor_boxes[:, 1::2] /= self.img_height
-            anchor_boxes = anchor_boxes.reshape(-1, 4)
+            anchor_boxes = anchor_boxes.reshape(-1, 4)  # (feature_h*feature_w*4(6), 4)
 
             anchor_boxes = np.minimum(np.maximum(anchor_boxes, 0.0), 1.0)
+            print(anchor_boxes.shape)
             output_boxes.append(anchor_boxes)
+        output_boxes = np.concatenate(output_boxes,axis=0)
+        # print(output_boxes.shape)
         return output_boxes
 
 
@@ -124,4 +128,4 @@ if __name__ == "__main__":
     input_shape = [300, 300]
     anchor = PriorAnchor(input_shape)
     total_anchor_boxes = anchor()
-    print(total_anchor_boxes[0][1])
+    print(total_anchor_boxes[0])
