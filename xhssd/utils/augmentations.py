@@ -416,7 +416,7 @@ if __name__ == '__main__':
     img_path = "../../batchdata/VOCdevkit/VOC2007/JPEGImages/000012.jpg"
     image = cv2.imread(img_path)
     # print(image)
-    boxes = np.array([[156, 97, 351, 270]], dtype=np.float32)
+    boxes = np.array([[156, 97, 351, 270]], dtype=np.float64)
     height, width, channels = image.shape
     print(height, width)
     boxes[:, ::2] /= width

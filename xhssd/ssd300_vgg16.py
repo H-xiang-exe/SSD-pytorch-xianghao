@@ -7,7 +7,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .data import config
-from utils import augmentations
 
 
 class L2Norm(nn.Module):

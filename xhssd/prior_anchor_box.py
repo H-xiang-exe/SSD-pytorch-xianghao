@@ -116,10 +116,10 @@ class PriorAnchor(object):
             anchor_boxes = anchor_boxes.reshape(-1, 4)  # (feature_h*feature_w*4(6), 4)
 
             anchor_boxes = np.minimum(np.maximum(anchor_boxes, 0.0), 1.0)
-            print(anchor_boxes.shape)
+            # print(anchor_boxes.shape)
             output_boxes.append(anchor_boxes)
         output_boxes = np.concatenate(output_boxes,axis=0)
-        # print(output_boxes.shape)
+        output_boxes = torch.tensor(output_boxes, dtype=torch.float32)
         return output_boxes
 
 
@@ -128,4 +128,4 @@ if __name__ == "__main__":
     input_shape = [300, 300]
     anchor = PriorAnchor(input_shape)
     total_anchor_boxes = anchor()
-    print(total_anchor_boxes[0])
+    # print(total_anchor_boxes[0])
