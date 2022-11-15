@@ -1,14 +1,11 @@
 import os
 
 import argparse
-import torch
-import torch.backends.cudnn as cudnn
-import torch.optim as optim
 from torch.utils.data import DataLoader
 # import visdom
 
-from xhssd.data import config, coco, voc0712
-from xhssd.ssd300_vgg16 import build_ssd
+from xhssd.data import coco, voc0712
+from xhssd import config
 
 
 def str2bool(v):

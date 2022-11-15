@@ -1,32 +1,9 @@
-import sys
-
-import cv2
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .data import config
-
-
-class L2Norm(nn.Module):
-    def __init__(self, n_channels, scale):
-        super(L2Norm, self).__init__()
-        self.n_channels = n_channels
-        self.gamma = scale or None
-        self.eps = 1e-10
-        self.weight = nn.Parameter(torch.Tensor(self.n_channels))  # shape = (20,)
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        torch.nn.init.constant_(self.weight, self.gamma)
-
-    def forward(self, x):  # (B, C, H, W)
-        norm = x.pow(2).sum(dim=1, keepdim=True).sqrt() + self.eps  # (B, 1, H, W)
-        x = torch.div(x, norm)  # (B, C, H, W)
-        out = self.weight.unsqueeze(0).unsqueeze(2).unsqueeze(3).expand_as(x) * x  # (1,20,1,1)
-        return out
-
+from . import config
+from .layers import L2Norm
 
 class SSD300_VGG16(nn.Module):
     """Single Shot Multibox Architecture
@@ -158,10 +135,6 @@ def detection_head(vgg, extra_layers):
         confidence_layer += [nn.Conv2d(v.out_channels, detection_cfg[k] * num_classes, kernel_size=3, padding=1)]
 
     return location_layer, confidence_layer
-
-
-def multibox():
-    pass
 
 
 def build_ssd(phase, size=300, num_classes=21):

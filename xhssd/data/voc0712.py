@@ -1,6 +1,3 @@
-from email.mime import image
-from logging import root
-
 import torch
 from torch.utils.data import Dataset
 import os
@@ -8,7 +5,7 @@ import cv2
 import numpy as np
 import xml.etree.ElementTree as ET  # 一种灵活的容器对象，用于在内存中存储结构化数据
 
-
+from xhssd.utils import preprocess
 class VOCAnnotationTransform(object):
     """用于对Annotation中的box坐标和分类进行归一化并返回[[xmin, ymin, xmax, ymax, cls_id], ...]"""
 
@@ -16,7 +13,7 @@ class VOCAnnotationTransform(object):
         """
         Args:
             img_annotation(ET element): the target annotation
-            classes(tuple): class name of object
+            classes(list): class name of object
             width(int): width
             height(int): height
         """
@@ -47,28 +44,27 @@ class VOCAnnotationTransform(object):
 class VOCDataset(Dataset):
     """输入数据集名字，输出处理好的数据"""
 
-    def __init__(self, root, image_dataset=None, transform=None, target_transform=VOCAnnotationTransform()):
+    def __init__(self, root_path, data_root, image_dataset=None, transform=None, target_transform=VOCAnnotationTransform()):
         """Handle the VOC annotation
         Args:
-            root(str): file path to VOCdevkit
+            root_path(str): root path of this project
+            data_root(str): file path to VOCdevkit
             image_dataset(tuple[str]): eg. ('2007', 'train'), ('2007', 'test'), ('2007', 'trainval')
         """
         super(VOCDataset, self).__init__()
-        self.classes = (
-            "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", "dog",
-            "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"
-        )
+        self.root_path = root_path
+        self.classes, self.num_classes = self.get_class()
         assert image_dataset is not None, f'image dataset is None, needs parameter: image_dataset'
         self.transform = transform
         self.target_transform = target_transform
 
         self.annotation_path = os.path.join(
-            root, f"VOC{image_dataset[0]}", "Annotations", "%s.xml")
+            data_root, f"VOC{image_dataset[0]}", "Annotations", "%s.xml")
         self.img_path = os.path.join(
-            root, f"VOC{image_dataset[0]}", "JPEGImages", "%s.jpg")
+            data_root, f"VOC{image_dataset[0]}", "JPEGImages", "%s.jpg")
 
         self.img_list = []
-        with open(os.path.join(root, f"VOC{image_dataset[0]}", "ImageSets", "Main", f"{image_dataset[1]}.txt")) as f:
+        with open(os.path.join(data_root, f"VOC{image_dataset[0]}", "ImageSets", "Main", f"{image_dataset[1]}.txt")) as f:
             lines = f.readlines()
             for line in lines:
                 self.img_list.append(line.strip())
@@ -128,10 +124,11 @@ class VOCDataset(Dataset):
         gt = self.target_transform(anno, self.classes, 1, 1)  # ([xmin, ymin, xmax, ymax, cls], ...)
         return img_id, gt
 
-
-if __name__ == "__main__":
-    from xhssd.utils import augmentations
-
-    voc = VOCDataset("..\\..\\batchdata\\VOCdevkit", ('2007', 'train'), transform=augmentations.SSDAugmentation())
-    # voc.pull_image(1)
-    voc.pull_anno(1)
+    def get_class(self):
+        voc_class = []
+        classes_txt = os.path.join(self.root_path, 'xhssd/data/voc_class.txt')
+        with open(classes_txt, 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                voc_class.append(line.strip())
+        return voc_class, len(voc_class)
