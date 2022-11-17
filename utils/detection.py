@@ -6,7 +6,7 @@ import numpy as np
 import torchvision
 
 from . import preprocess
-from .. import prior_anchor_box
+import prior_anchor
 
 
 class Detection(object):
@@ -129,7 +129,7 @@ class Detection(object):
                 # 判断是否大于门限
                 c_confs = mbox_conf[i, :, c]  # [num_anchors]
                 c_confs_m = c_confs > self.confidence
-                c_confs_m = [not x for x in c_confs_m]
+                # c_confs_m = [not x for x in c_confs_m]
                 if (len(c_confs[c_confs_m])) > 0:
                     # 取出得分高于confidence的框及其属于c类的概率（置信度）
                     boxes2process = decode_bbox[c_confs_m]

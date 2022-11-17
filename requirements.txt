@@ -3,3 +3,4 @@ opencv-python~=4.6.0.66
 numpy~=1.19.5
 matplotlib~=3.3.4
 torchvision~=0.9.1
+pyyaml~=3.12

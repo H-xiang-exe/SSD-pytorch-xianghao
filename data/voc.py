@@ -1,11 +1,11 @@
 import torch
-from torch.utils.data import Dataset
+import torch.utils.data
 import os
 import cv2
 import numpy as np
 import xml.etree.ElementTree as ET  # 一种灵活的容器对象，用于在内存中存储结构化数据
 
-from xhssd.utils import preprocess
+
 class VOCAnnotationTransform(object):
     """用于对Annotation中的box坐标和分类进行归一化并返回[[xmin, ymin, xmax, ymax, cls_id], ...]"""
 
@@ -41,30 +41,30 @@ class VOCAnnotationTransform(object):
         return boxes
 
 
-class VOCDataset(Dataset):
+class VOCDataset(torch.utils.data.Dataset):
     """输入数据集名字，输出处理好的数据"""
 
-    def __init__(self, root_path, data_root, image_dataset=None, transform=None, target_transform=VOCAnnotationTransform()):
+    def __init__(self, dataset_info, image_dataset='train', transform=None, target_transform=VOCAnnotationTransform()):
         """Handle the VOC annotation
         Args:
             root_path(str): root path of this project
             data_root(str): file path to VOCdevkit
-            image_dataset(tuple[str]): eg. ('2007', 'train'), ('2007', 'test'), ('2007', 'trainval')
+            image_dataset(str): eg. 'train', 'test', 'trainval'
         """
         super(VOCDataset, self).__init__()
-        self.root_path = root_path
-        self.classes, self.num_classes = self.get_class()
-        assert image_dataset is not None, f'image dataset is None, needs parameter: image_dataset'
+        self.root_path = dataset_info['data_root']
+        self.classes = dataset_info['classes']
+        self.num_classes = dataset_info['num_classes']
         self.transform = transform
         self.target_transform = target_transform
 
         self.annotation_path = os.path.join(
-            data_root, f"VOC{image_dataset[0]}", "Annotations", "%s.xml")
+            self.root_path, "Annotations", "%s.xml")
         self.img_path = os.path.join(
-            data_root, f"VOC{image_dataset[0]}", "JPEGImages", "%s.jpg")
+            self.root_path, "JPEGImages", "%s.jpg")
 
         self.img_list = []
-        with open(os.path.join(data_root, f"VOC{image_dataset[0]}", "ImageSets", "Main", f"{image_dataset[1]}.txt")) as f:
+        with open(os.path.join(self.root_path, "ImageSets", "Main", f"{image_dataset}.txt")) as f:
             lines = f.readlines()
             for line in lines:
                 self.img_list.append(line.strip())
@@ -78,13 +78,14 @@ class VOCDataset(Dataset):
         gt(boxes): size of (num_box, 5), 5-> [xmin, ymin, xmax, ymax, label]
         """
         img, gt, h, w = self.pull_item(idx)
+        return img, gt
 
     def pull_item(self, idx):
         img_id = self.img_list[idx]
         target = ET.parse(self.annotation_path % img_id).getroot()
         img = cv2.imread(self.img_path % img_id)  # (height, Width, 'BGR')
+        assert img is not None, 'image is not found'
         height, width, channels = img.shape
-        # print(img_id)
 
         if self.target_transform is not None:
             target = self.target_transform(target, self.classes, width,
@@ -92,11 +93,16 @@ class VOCDataset(Dataset):
 
         if self.transform is not None:
             target = np.array(target)
+            print("--------------------")
+            print(f'image_id: {img_id}')
+            print(target[:, 4])
+            print("--------------------")
             img, boxes, labels = self.transform(img, target[:, :4], target[:, 4])  # 对图片进行数据增强同时改变其对应的box坐标和label值
             # 图片由opencv读取，现在通道顺序是：BGR，现在需要转换成RGB
             img = img[:, :, (2, 1, 0)]
             # boxes: (num_box, 4), labels: (num_box) --> labels: (num_box, 1) --> cat(boxes, labels): (num_box, 5)
             target = np.hstack([boxes, np.expand_dims(labels, axis=1)])
+            target = torch.from_numpy(target)
         return torch.from_numpy(img).permute(2, 0, 1), target, height, width  # 输出图片仍然是BGR
 
     def pull_image(self, idx):
@@ -124,11 +130,21 @@ class VOCDataset(Dataset):
         gt = self.target_transform(anno, self.classes, 1, 1)  # ([xmin, ymin, xmax, ymax, cls], ...)
         return img_id, gt
 
-    def get_class(self):
-        voc_class = []
-        classes_txt = os.path.join(self.root_path, 'xhssd/data/voc_class.txt')
-        with open(classes_txt, 'r') as f:
-            lines = f.readlines()
-            for line in lines:
-                voc_class.append(line.strip())
-        return voc_class, len(voc_class)
+
+def dataset_collate(batch):
+    """自定义collate fn用于处理解决批量图片的annotations的stack问题，由于每张图片对应的annotation(bounding boxes
+    数量不同，默认的collate fn会报错，因此此处自定义collate
+    Args:
+        batch: (tuple) A tuple of tensor images and lists of annotations
+
+    Returns:
+        A tuple containing:
+            1) (tensor) batch of images stacked on their 0 dim
+            2) (list of tensors) annotations for a given image are stacked on 0 dim
+    """
+    targets = []
+    imgs = []
+    for sample in batch:
+        imgs.append(sample[0])
+        targets.append(torch.from_numpy(np.array(sample[1], dtype=np.float32)))
+    return torch.stack(imgs, dim=0), targets

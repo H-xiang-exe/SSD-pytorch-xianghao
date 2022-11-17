@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from . import config
-from .layers import L2Norm
+from xhssd import config
+from layers.l2norm import L2Norm
 
 class SSD300_VGG16(nn.Module):
     """Single Shot Multibox Architecture

@@ -2,8 +2,8 @@ import os
 import cv2
 import torch
 
-from xhssd import ssd300_vgg16
-from xhssd.utils import detection
+from modeling import ssd300_vgg16
+from utils import detection
 
 if __name__ == '__main__':
     model = ssd300_vgg16.build_ssd('test')
@@ -24,7 +24,7 @@ if __name__ == '__main__':
             print('Open Error! Try again!')
             continue
         else:
-            detector = detection.Detection(input_shape=[300,300], device=device)
+            detector = detection.Detection(input_shape=[300, 300], device=device)
             r_image = detector.detect_image(model, image)
             # r_image.show()
             break
