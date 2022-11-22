@@ -2,15 +2,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from xhssd import config
 from layers.l2norm import L2Norm
+from utils.prior_anchor import PriorAnchor
+
 
 class SSD300_VGG16(nn.Module):
     """Single Shot Multibox Architecture
     The network is composed of a base VGG network followed by the added multibox conv layers.Each multibox layer branchs into:
     """
 
-    def __init__(self, phase, size, base, extras, head, num_classes):
+    def __init__(self, phase, size, base, extras, head, num_classes, config):
         """
         Args:
             phase(string): "test" or "train"
@@ -22,13 +23,15 @@ class SSD300_VGG16(nn.Module):
         super(SSD300_VGG16, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
-        self.cfg = (config.coco, config.voc)[num_classes == 21]
+        self.cfg = config
 
         # SSD network
         self.vgg = nn.ModuleList(base)
         self.extras = nn.ModuleList(extras)
         self.location = nn.ModuleList(head[0])
         self.confidence = nn.ModuleList(head[1])
+        self.prior_anchors = PriorAnchor((size, size))()
+
         self.L2Norm = L2Norm(512, 20)
 
     def forward(self, x):
@@ -65,7 +68,8 @@ class SSD300_VGG16(nn.Module):
         loc.view(loc.size()[0], -1, 4)
         # print(conf.size()[0], self.num_classes)
         conf.view(conf.size()[0], -1, self.num_classes)
-        output = (loc.view(loc.size()[0], -1, 4), conf.view(conf.size()[0], -1, self.num_classes))
+
+        output = (loc.view(loc.size()[0], -1, 4), conf.view(conf.size()[0], -1, self.num_classes), self.prior_anchors)
 
         return output
 
@@ -137,7 +141,7 @@ def detection_head(vgg, extra_layers):
     return location_layer, confidence_layer
 
 
-def build_ssd(phase, size=300, num_classes=21):
+def build_ssd(phase, dataset_config, size=(300, 300), num_classes=21):
     '''
     Args:
         phase: 'train' or 'test'
@@ -150,4 +154,4 @@ def build_ssd(phase, size=300, num_classes=21):
     base_ = vgg()
     extras_ = add_extras()
     head_ = detection_head(base_, extras_)
-    return SSD300_VGG16(phase, size, base_, extras_, head_, num_classes)
+    return SSD300_VGG16(phase, size, base_, extras_, head_, num_classes, dataset_config)

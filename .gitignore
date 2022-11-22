@@ -4,3 +4,5 @@ __pycache__/
 
 ssd.pth
 .ipynb_checkpoints
+
+checkpoints

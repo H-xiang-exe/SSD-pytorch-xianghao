@@ -77,10 +77,12 @@ class VOCDataset(torch.utils.data.Dataset):
         img: size of (height, width, 3), 3-> BGR
         gt(boxes): size of (num_box, 5), 5-> [xmin, ymin, xmax, ymax, label]
         """
+        cv2.setNumThreads(0)
         img, gt, h, w = self.pull_item(idx)
         return img, gt
 
     def pull_item(self, idx):
+        cv2.setNumThreads(0)
         img_id = self.img_list[idx]
         target = ET.parse(self.annotation_path % img_id).getroot()
         img = cv2.imread(self.img_path % img_id)  # (height, Width, 'BGR')
@@ -93,10 +95,10 @@ class VOCDataset(torch.utils.data.Dataset):
 
         if self.transform is not None:
             target = np.array(target)
-            print("--------------------")
-            print(f'image_id: {img_id}')
-            print(target[:, 4])
-            print("--------------------")
+            # print("--------------------")
+            # print(f'image_id: {img_id}')
+            # print(target[:, 4])
+            # print("--------------------")
             img, boxes, labels = self.transform(img, target[:, :4], target[:, 4])  # 对图片进行数据增强同时改变其对应的box坐标和label值
             # 图片由opencv读取，现在通道顺序是：BGR，现在需要转换成RGB
             img = img[:, :, (2, 1, 0)]
@@ -144,7 +146,8 @@ def dataset_collate(batch):
     """
     targets = []
     imgs = []
-    for sample in batch:
-        imgs.append(sample[0])
-        targets.append(torch.from_numpy(np.array(sample[1], dtype=np.float32)))
-    return torch.stack(imgs, dim=0), targets
+    for img, box in batch:
+        imgs.append(img)
+        targets.append(torch.tensor(box,dtype=torch.float32))
+    images = torch.stack(imgs, dim=0)
+    return images, targets

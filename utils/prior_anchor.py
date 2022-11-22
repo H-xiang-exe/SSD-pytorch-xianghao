@@ -11,7 +11,7 @@ class PriorAnchor(object):
         """大小为input_shape的图片，对应于6个feature level(每个level对应着把原图划分为不同数量的网格)，
 
         Args:
-            input_shape(list): 输入的图片的大小
+            input_shape(tuple): 输入的图片的大小
             min_size(int): 规定了当前尺度(scale)下的最小框尺寸
             max_size(int): 规定了当前尺度(scale)下的大框尺寸
             aspect_ratios(list): 规定了6个feature level上每一个位置对应的多个框的纵横比。eg.[[1, 2], [1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2], [1, 2]]
@@ -118,7 +118,7 @@ class PriorAnchor(object):
             anchor_boxes = np.minimum(np.maximum(anchor_boxes, 0.0), 1.0)
             # print(anchor_boxes.shape)
             output_boxes.append(anchor_boxes)
-        output_boxes = np.concatenate(output_boxes,axis=0)
+        output_boxes = np.concatenate(output_boxes, axis=0)
         output_boxes = torch.tensor(output_boxes, dtype=torch.float32)
         return output_boxes
 
