@@ -4,6 +4,7 @@ import os
 from tqdm import tqdm
 
 from torch.utils.data import DataLoader
+from torch.backends import cudnn
 
 import data
 from utils import preprocess
@@ -27,7 +28,7 @@ class Trainer(object):
         self.save_ckp_dir = os.path.join(self.base_root, 'checkpoints')
 
         # 获得设备(cpu, cuda)
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
         # 准备数据集
         self.dataset_info = self._get_dataset_info()  # 当前所选数据集的相关配置信息
@@ -89,11 +90,18 @@ class Trainer(object):
 
     def train(self):
         self.model.to(self.device)
-        self.model.train()
+        if self.device == 'cuda':
+                # net = torch.nn.DataParallel(net)  # make parallel
+                cudnn.benchmark = True
         for epoch in range(50):
+            print('------------------------')
+            self.model.train()
             for batch_idx, (images, targets) in tqdm(enumerate(self.train_dataloader)):
+                print(f'Epoch: {epoch} -- Batch: {batch_idx} -- Begin0')
                 images = images.to(self.device)
+                print(f'Epoch: {epoch} -- Batch: {batch_idx} -- Begin1')
                 targets = [target.to(self.device) for target in targets]
+                print(f'Epoch: {epoch} -- Batch: {batch_idx} -- Begin2')
 
                 outputs = self.model(images)
 
@@ -103,6 +111,7 @@ class Trainer(object):
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
+                print(f'Epoch: {epoch} -- Batch: {batch_idx} -- End')
             # if epoch % 5 == 0:
             #     ckp_name = os.path.join(self.save_ckp_dir, 'model_%d.pth')
             #     torch.save(self.model.state_dict(), ckp_name % epoch)
