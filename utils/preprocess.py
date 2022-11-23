@@ -279,7 +279,7 @@ class RandomSampleCrop(object):
     def __init__(self):
         self.sample_options = (
             # using entire original image
-            # None,
+            None,
             (0.1, None),
             (0.3, None),
             (0.7, None),
@@ -288,14 +288,17 @@ class RandomSampleCrop(object):
         )
 
     def __call__(self, image, boxes=None, labels=None):
+        # guard against no boxes
+        if boxes is not None and boxes.shape[0] == 0:
+            return image, boxes, labels
         height, width, _ = image.shape
         while True:
             # 随机选取一种裁剪方式
-            mod = random.choice(self.sample_options)
-            if mod is None:
+            mode = self.sample_options[np.random.randint(0, len(self.sample_options))]
+            if mode is None:
                 return image, boxes, labels
             # 最小Iou和最大IoU
-            min_iou, max_iou = mod
+            min_iou, max_iou = mode
             if min_iou is None:
                 min_iou = float('-inf')
             if max_iou is None:
@@ -322,9 +325,11 @@ class RandomSampleCrop(object):
                 # 求解原始的boxes和新的图像的IoU
                 overlap = iou(boxes, rect)
 
-                if overlap.min() < min_iou and overlap.max() > max_iou:
+                if overlap.max() < min_iou or overlap.min() > max_iou:
                     continue
 
+                # cur the crop from the image
+                current_img = current_img[rect[1]:rect[3], rect[0]: rect[2], :]
                 # box中心点坐标
                 center = (boxes[:, :2] + boxes[:, 2:]) / 2.0
                 m1 = (rect[0] < center[:, 0]) * (rect[1] < center[:, 1])
@@ -340,7 +345,7 @@ class RandomSampleCrop(object):
                 current_boxes[:, :2] = np.maximum(
                     current_boxes[:, :2], rect[:2]) - rect[:2]
                 current_boxes[:, 2:] = np.minimum(
-                    current_boxes[:, 2:], rect[2:]) - rect[:2]
+                    current_boxes[:, 2:], rect[2:]) - rect[2:]
                 return current_img, current_boxes, current_labels
 
 

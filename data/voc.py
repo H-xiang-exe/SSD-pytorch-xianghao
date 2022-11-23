@@ -1,3 +1,4 @@
+from PIL import Image
 import torch
 import torch.utils.data
 import os
@@ -77,15 +78,16 @@ class VOCDataset(torch.utils.data.Dataset):
         img: size of (height, width, 3), 3-> BGR
         gt(boxes): size of (num_box, 5), 5-> [xmin, ymin, xmax, ymax, label]
         """
-        cv2.setNumThreads(0)
         img, gt, h, w = self.pull_item(idx)
         return img, gt
 
     def pull_item(self, idx):
         cv2.setNumThreads(0)
+        cv2.ocl.setUseOpenCL(False)
         img_id = self.img_list[idx]
         target = ET.parse(self.annotation_path % img_id).getroot()
-        img = cv2.imread(self.img_path % img_id)  # (height, Width, 'BGR')
+        # img = cv2.imread(self.img_path % img_id)  # (height, Width, 'BGR')
+        img = np.asarray(Image.open(self.img_path % img_id))  # (height, Width, 'BGR')
         assert img is not None, 'image is not found'
         height, width, channels = img.shape
 
@@ -148,6 +150,6 @@ def dataset_collate(batch):
     imgs = []
     for img, box in batch:
         imgs.append(img)
-        targets.append(torch.tensor(box,dtype=torch.float32))
-    images = torch.stack(imgs, dim=0)
-    return images, targets
+        targets.append(box)
+    imgs = torch.stack(imgs, dim=0)
+    return imgs, targets

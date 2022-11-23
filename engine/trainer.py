@@ -41,6 +41,7 @@ class Trainer(object):
                                            shuffle=True,
                                            collate_fn=data.voc.dataset_collate,
                                            drop_last=True,
+                                           # num_workers=1
                                            # pin_memory=True
                                            )
         self.test_dataloader = DataLoader(self.test_data,
@@ -93,7 +94,9 @@ class Trainer(object):
         if self.device == 'cuda':
                 # net = torch.nn.DataParallel(net)  # make parallel
                 cudnn.benchmark = True
+        batch_manager = iter(self.train_dataloader)
         for epoch in range(50):
+            batch_idx = 0
             print('------------------------')
             self.model.train()
             for batch_idx, (images, targets) in tqdm(enumerate(self.train_dataloader)):

@@ -3,7 +3,7 @@ sys.path.append('../')
 from engine.trainer import Trainer
 from config import parse
 
-BASE_DIR = '/root/autodl-tmp/SSD-pytorch-xianghao'
+BASE_DIR = 'D:\Works\SSD-pytorch-xianghao'
 args = parse.get_config()
 
 
