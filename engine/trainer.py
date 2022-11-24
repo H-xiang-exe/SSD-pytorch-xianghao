@@ -61,6 +61,9 @@ class Trainer(object):
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=args.lr, momentum=args.momentum,
                                          weight_decay=args.weight_decay)
 
+        # 设置学习率
+        self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[30, 80], gamma=0.1)
+
         # 加载模型权重
 
     def _get_dataset_info(self):
@@ -94,17 +97,11 @@ class Trainer(object):
         if self.device == 'cuda':
                 # net = torch.nn.DataParallel(net)  # make parallel
                 cudnn.benchmark = True
-        batch_manager = iter(self.train_dataloader)
-        for epoch in range(50):
-            batch_idx = 0
-            print('------------------------')
+        for epoch in range(self.args.epoch):
             self.model.train()
             for batch_idx, (images, targets) in tqdm(enumerate(self.train_dataloader)):
-                print(f'Epoch: {epoch} -- Batch: {batch_idx} -- Begin0')
                 images = images.to(self.device)
-                print(f'Epoch: {epoch} -- Batch: {batch_idx} -- Begin1')
                 targets = [target.to(self.device) for target in targets]
-                print(f'Epoch: {epoch} -- Batch: {batch_idx} -- Begin2')
 
                 outputs = self.model(images)
 
@@ -114,10 +111,10 @@ class Trainer(object):
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
-                print(f'Epoch: {epoch} -- Batch: {batch_idx} -- End')
-            # if epoch % 5 == 0:
-            #     ckp_name = os.path.join(self.save_ckp_dir, 'model_%d.pth')
-            #     torch.save(self.model.state_dict(), ckp_name % epoch)
+                self.scheduler.step()
+                if batch_idx % 2 == 0:
+                    loss = loss.item()/len(images)
+                    print(f'Epoch: {epoch}, Batch_idx:{batch_idx}, loss: {loss:>7f}')
 
     def test(self):
         pass

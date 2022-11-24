@@ -1,7 +1,12 @@
+import os
+
 from config import parse
-from engine import trainer
+from engine.trainer import Trainer
 
 if __name__ == '__main__':
+    BASE_DIR = os.getcwd()
     args = parse.get_config()
-    trainer = trainer.Trainer(args)
+
+    trainer = Trainer(args, BASE_DIR)
+    trainer.train()
 
