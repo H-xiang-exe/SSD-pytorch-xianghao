@@ -1,16 +1,15 @@
-import torch
-import yaml
 import os
-from tqdm import tqdm
 
+from tqdm import tqdm
+import torch
 from torch.utils.data import DataLoader
 from torch.backends import cudnn
+import yaml
 
-import data
-from utils import preprocess
-from modeling.ssd300_vgg16 import build_ssd
 from solver.multibox_loss import MultiBoxLoss
-
+from modeling.ssd300_vgg16 import build_ssd
+from utils import preprocess
+import data
 
 class Trainer(object):
     def __init__(self, args, base_root):
@@ -55,20 +54,23 @@ class Trainer(object):
         self.model = self._get_model()
 
         # 设置损失函数
-        self.criterion = MultiBoxLoss(self.dataset_info['num_classes'], 0.5, self.dataset_info['variance'], 3, self.device)
+        self.criterion = MultiBoxLoss(
+            self.dataset_info['num_classes'], 0.5, self.dataset_info['variance'], 3, self.device)
 
         # 设置优化器
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=args.lr, momentum=args.momentum,
                                          weight_decay=args.weight_decay)
 
         # 设置学习率
-        self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[30, 80], gamma=0.1)
+        self.scheduler = torch.optim.lr_scheduler.MultiStepLR(
+            self.optimizer, milestones=[30, 80], gamma=0.1)
 
         # 加载模型权重
 
     def _get_dataset_info(self):
         # 获得所有数据集的相关信息
-        datasets_info_path = os.path.join(self.base_root, 'configs/datasets.yaml')
+        datasets_info_path = os.path.join(
+            self.base_root, 'configs/datasets.yaml')
         with open(datasets_info_path, 'r', encoding='utf-8') as f:
             datasets_info = yaml.safe_load(f)
         # 根据命令行的args获得当前数据集的信息（包括数据根目录、类别数等）
@@ -81,8 +83,10 @@ class Trainer(object):
 
         training_data, test_data = None, None
         if cur_dataset_name == 'VOC2007':
-            training_data = data.voc.VOCDataset(self.dataset_info, 'train', preprocess.TrainTransform())
-            test_data = data.voc.VOCDataset(self.dataset_info, 'val', preprocess.TrainTransform())
+            training_data = data.voc.VOCDataset(
+                self.dataset_info, 'train', preprocess.TrainTransform())
+            test_data = data.voc.VOCDataset(
+                self.dataset_info, 'val', preprocess.TrainTransform())
 
         assert training_data is not None and test_data is not None, 'load train/test data failed'
         return training_data, test_data
@@ -94,9 +98,9 @@ class Trainer(object):
 
     def train(self):
         self.model.to(self.device)
-        if self.device == 'cuda':
-                # net = torch.nn.DataParallel(net)  # make parallel
-                cudnn.benchmark = True
+        # if self.device == 'cuda':
+        #         # net = torch.nn.DataParallel(net)  # make parallel
+        #         cudnn.benchmark = True
         for epoch in range(self.args.epoch):
             self.model.train()
             for batch_idx, (images, targets) in tqdm(enumerate(self.train_dataloader)):
@@ -114,7 +118,8 @@ class Trainer(object):
                 self.scheduler.step()
                 if batch_idx % 2 == 0:
                     loss = loss.item()/len(images)
-                    print(f'Epoch: {epoch}, Batch_idx:{batch_idx}, loss: {loss:>7f}')
+                    print(
+                        f'Epoch: {epoch}, Batch_idx:{batch_idx}, loss: {loss:>7f}')
 
     def test(self):
         pass
