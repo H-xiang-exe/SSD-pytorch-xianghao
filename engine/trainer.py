@@ -1,5 +1,6 @@
 import os
 
+import logging
 from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
@@ -11,6 +12,8 @@ from modeling.ssd300_vgg16 import build_ssd
 from utils import preprocess
 import data
 
+def do_train(args):
+    pass
 
 class Trainer(object):
     def __init__(self, args, base_root):
@@ -38,7 +41,7 @@ class Trainer(object):
         self.train_dataloader = DataLoader(self.training_data,
                                            batch_size=args.batch_size,
                                            # num_workers=args.num_workers,
-                                           shuffle=False,
+                                           shuffle=True,
                                            collate_fn=data.voc.dataset_collate,
                                            drop_last=True,
                                            # num_workers=1

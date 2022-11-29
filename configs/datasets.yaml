@@ -1,6 +1,6 @@
 VOC2007:
   'name': 'VOC2007'
-  'data_root': 'D:\Works\SSD-pytorch-xianghao\batchdata\VOCdevkit\VOC2007'
+  'data_root': '/root/autodl-tmp/data/VOCdevkit/VOC2007'
   'classes': ['aeroplane','bicycle','bird','boat','bottle','bus','car','cat','chair','cow','diningtable','dog','horse',
               'motorbike', 'person','pottedplant','sheep','sofa','train','tvmonitor']
   'num_classes': 21
