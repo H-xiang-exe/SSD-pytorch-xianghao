@@ -54,13 +54,11 @@ class MultiBoxLoss(nn.Module):
         priors = priors[:loc_data.size(1), :]
         # 获得先验框的数量
         num_priors = priors.size(0)
-        # 获得类别数
-        num_classes = self.num_classes
 
         # ----------------- match priors (default boxes) and groundth boxes ----------------------
         # 为每张图片每个prior box设定一个目标框
         loc_t = torch.Tensor(batch_size, num_priors, 4).to(self.device)
-        conf_t = torch.LongTensor(batch_size, num_priors).to(self.device)
+        conf_t = torch.LongTensor(batch_size, num_priors).to(self.device) # 每个prior的类别
         # 通过以下操作获得每张图片的目标框信息（包括位置和分类）
         for idx in range(batch_size):
             # 获得一张图片的若干个目标框的位置
@@ -69,19 +67,10 @@ class MultiBoxLoss(nn.Module):
             labels = targets[idx][:, -1].data
             # 获得所有先验框的坐标
             defaults = priors.data.to(self.device)
-
             match(self.threshold, truths, defaults, self.variance, labels, loc_t, conf_t, idx)
 
         # 获得所有priors中目标框为非背景类的框的索引
         pos = conf_t > 0  # (batch_size, num_priors)
-        # pos[2, 4] = True
-        # pos[2, 5] = True
-        # pos[4, 2] = True
-        # print(pos.shape)
-        # 获得每张图片的先验框中目标框内为非背景类的框的数量
-        num_pos = pos.sum(dim=1, keepdim=True)  # shape: (batch_size, num_priors_nonbackground)
-        # Localization Loss(Smooth L1)
-        pos_idx = pos.unsqueeze(dim=-1).expand_as(loc_data)  # (batch_size, num_priors, 4)
 
         # 获得预测结果中非背景类(正例)的框的坐标
         loc_p = loc_data[pos]
@@ -96,6 +85,7 @@ class MultiBoxLoss(nn.Module):
         # 计算所有框的默认分类损失(cross entropy)
         loss_c = log_sum_exp(batch_conf) - batch_conf.gather(1, conf_t.view(-1, 1))
 
+
         # Hard negative mining
         loss_c = loss_c.view(batch_size, -1)  # (batch_size, num_priors)
         # 因为给负样本排序，所以给正样本置0
@@ -107,9 +97,12 @@ class MultiBoxLoss(nn.Module):
 
         # 每张图片中非背景框的数量
         num_pos = pos.long().sum(1, keepdim=True)  # （batch_size, 1]
-        # 根据negative:postive比值，获得每张图片中用于作为背景框（负例）的数量
-        num_neg = torch.clamp(self.negpos_ratio * num_pos, max=pos.size(1) - 1)  # (batch, 1)
-        neg = idx_rank < num_neg.expand_as(idx_rank)  # 得到负样本（batch_size, num_piros)
+        # print(f'num_pos: {num_pos}')
+        # 根据negative: postive比值，获得每张图片中用于作为背景框（负例）的数量
+        # num_neg = torch.clamp(self.negpos_ratio * num_pos, max=pos.size(1) - 1)  # (batch, 1)
+        num_neg = torch.min(self.negpos_ratio*num_pos, pos.size(1) - num_pos)
+        # print(f'num_neg: {num_neg}')
+        neg = idx_rank < num_neg.expand_as(idx_rank)  # 得到负样本索引（batch_size, num_priors)
 
         # Confidence loss including positive and negative examples
         pos_idx = pos.unsqueeze(dim=2).expand_as(conf_data)  # (batch_size, num_priors, num_classes)
@@ -124,6 +117,12 @@ class MultiBoxLoss(nn.Module):
         # Sum of losses: L(x,c,l,g)= ( L_conf(x,c) + alpha * L_loc(x,l,g) )/N
 
         N = num_pos.data.sum()  # batch_size
-        loss_l /= N
-        loss_c /= N
-        return loss_l, loss_c
+        res_loss_l = loss_l/N
+        res_loss_c = loss_c/N
+        # import math
+        # if(math.isnan(res_loss_c)):
+        #     print(loss_c)
+        #     print(loss_l)
+        #     exit(0)
+
+        return res_loss_l, res_loss_c

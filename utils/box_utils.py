@@ -32,9 +32,10 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
 
     """
     # 获得truth和priors的iou
-    overlaps = torchvision.ops.box_iou(truths, point_form(priors))  # (N,M)
+    overlaps = torchvision.ops.box_iou(truths, priors)  # (N,M)
 
     # ------------ 先验框和目标框互相匹配 ---------------
+    # 以下的实现方式从理论上并不能完全保证gt box都能匹配上prior box
     # 每个目标框优先匹配与其IOU最大的先验框
     best_prior_overlap, best_prior_idx = torch.max(overlaps, dim=1)  # (num_objs)
 
@@ -52,7 +53,7 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
 
     # 对于num_priors个盒子，它们和对应的truth box的iou如果小于某个阈值，我们将其视为负样本，令其分类标签为0
     conf[best_truth_overlap < threshold] = 0
-    loc = encode(matches, priors, variances) # 和prior boxes相匹配的gt boxes经过variance编码的target boxes
+    loc = encode(matches, priors, variances)  # 和prior boxes相匹配的gt boxes经过variance编码的target boxes
     loc_t[idx] = loc
     conf_t[idx] = conf
 

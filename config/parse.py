@@ -15,7 +15,7 @@ data_arg = parser.add_argument_group('Data')
 data_arg.add_argument("--dataset", default='VOC2007', choices=["VOC2007", "VOC2012", "COCO"], type=str,
                       help="VOC or COCO")
 data_arg.add_argument('--epoch', default=150, type=int, help='train phase epochs')
-data_arg.add_argument('--batch_size', default=5, type=int, help='batch size of train/test')
+data_arg.add_argument('--batch_size', default=8, type=int, help='batch size of train/test')
 data_arg.add_argument('--test_batch_size', default=8, type=int, help='batch size of train/test')
 data_arg.add_argument('--num_workers', default=1, type=int)
 data_arg.add_argument('--pin_memory', default=False, type=bool)

@@ -36,12 +36,11 @@ class PriorAnchor(object):
         """
         output_boxes = []
 
-        boxes_height = []
-        boxes_width = []
-
         # 求解每个level的feature map对应在原图的先验框的坐标集合
         for idx, (feature_h, feature_w, min_size, max_size) in enumerate(
                 zip(self.feature_heights, self.feature_widths, self.min_sizes, self.max_sizes)):
+            boxes_height = []
+            boxes_width = []
             for ar in self.aspect_rations[idx]:
                 if ar == 1:
                     # aspect ratio = 1:1, height=width= min_size
@@ -53,18 +52,18 @@ class PriorAnchor(object):
                     boxes_width.append(prime)
                 else:
                     # aspect ratio = ar, height = min_size/ar, width = min_size*ar
-                    boxes_height.append(self.min_sizes[idx] / ar)
-                    boxes_width.append(self.min_sizes[idx] * ar)
+                    boxes_height.append(self.min_sizes[idx] / np.sqrt(ar))
+                    boxes_width.append(self.min_sizes[idx] * np.sqrt(ar))
                     # aspect ratio = ar, height = min_size*ar, width = min_size/ar
-                    boxes_height.append(self.min_sizes[idx] * ar)
-                    boxes_width.append(self.min_sizes[idx] / ar)
+                    boxes_height.append(self.min_sizes[idx] * np.sqrt(ar))
+                    boxes_width.append(self.min_sizes[idx] / np.sqrt(ar))
 
+            boxes_width = np.array(boxes_width)
+            boxes_height = np.array(boxes_height)
             # feature的尺寸为h*w，对应的原图被划分为h*w个网格
             # 求解用于detection的feature在原图对应的网格的边长
             step_w = self.img_width / feature_w
             step_h = self.img_height / feature_h
-            half_step_w = step_w / 2
-            half_step_h = step_h / 2
 
             # 获得网格中心点的横坐标和纵坐标
             linw = np.linspace(0.5 * step_w, self.img_width - 0.5 * step_w, feature_w)
@@ -88,20 +87,20 @@ class PriorAnchor(object):
             anchor_boxes = np.tile(anchor_boxes, (1, 2 * num_anchor_))
             # 对于每个网格，坐标分别为(box1_left, box1_top, box1_right, box1_down, box2_left, box2_top, box2_right, box2_down, ...)
             # 求解每个网格的所有box的left, top, right, down坐标值
-            anchor_boxes[:, ::4] -= half_step_w  # 左上角横坐标
-            anchor_boxes[:, 1::4] -= half_step_h  # 左上角纵坐标
-            anchor_boxes[:, 2::4] += half_step_w  # 右下角横坐标
-            anchor_boxes[:, 3::4] += half_step_h  # 右下角纵坐标
+            anchor_boxes[:, ::4] -= boxes_width * 0.5  # 左上角横坐标
+            anchor_boxes[:, 1::4] -= boxes_height * 0.5  # 左上角纵坐标
+            anchor_boxes[:, 2::4] += boxes_width * 0.5  # 右下角横坐标
+            anchor_boxes[:, 3::4] += boxes_height * 0.5  # 右下角纵坐标
 
             # if layer_height == 3:
-            #     rect1 = plt.Rectangle((anchor_boxes[4, 0], anchor_boxes[4, 1]), box_widths[0], box_heights[0], color='r',
-            #                           fill=False)
-            #     rect2 = plt.Rectangle((anchor_boxes[4, 4], anchor_boxes[4, 5]), box_widths[1], box_heights[1], color='r',
-            #                           fill=False)
-            #     rect3 = plt.Rectangle((anchor_boxes[4, 8], anchor_boxes[4, 9]), box_widths[2], box_heights[2], color='r',
-            #                           fill=False)
-            #     rect4 = plt.Rectangle((anchor_boxes[4, 12], anchor_boxes[4, 13]), box_widths[3], box_heights[3], color='r',
-            #                           fill=False)
+            #     rect1 = plt.Rectangle((anchor_boxes[4, 0], anchor_boxes[4, 1]), box_widths[0], box_heights[0],
+            #     color='r', fill=False)
+            #     rect2 = plt.Rectangle((anchor_boxes[4, 4], anchor_boxes[4, 5]), box_widths[1], box_heights[1],
+            #     color='r',fill=False)
+            #     rect3 = plt.Rectangle((anchor_boxes[4, 8], anchor_boxes[4, 9]), box_widths[2], box_heights[2],
+            #     color='r',fill=False)
+            #     rect4 = plt.Rectangle((anchor_boxes[4, 12], anchor_boxes[4, 13]), box_widths[3], box_heights[3],
+            #     color='r',fill=False)
             #
             #     ax.add_patch(rect1)
             #     ax.add_patch(rect2)

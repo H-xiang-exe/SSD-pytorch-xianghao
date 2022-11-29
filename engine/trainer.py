@@ -11,6 +11,7 @@ from modeling.ssd300_vgg16 import build_ssd
 from utils import preprocess
 import data
 
+
 class Trainer(object):
     def __init__(self, args, base_root):
         """
@@ -37,7 +38,7 @@ class Trainer(object):
         self.train_dataloader = DataLoader(self.training_data,
                                            batch_size=args.batch_size,
                                            # num_workers=args.num_workers,
-                                           shuffle=True,
+                                           shuffle=False,
                                            collate_fn=data.voc.dataset_collate,
                                            drop_last=True,
                                            # num_workers=1
@@ -63,7 +64,7 @@ class Trainer(object):
 
         # 设置学习率
         self.scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            self.optimizer, milestones=[30, 80], gamma=0.1)
+            self.optimizer, milestones=[40, 50, 60], gamma=0.1)
 
         # 加载模型权重
 
@@ -101,9 +102,11 @@ class Trainer(object):
         # if self.device == 'cuda':
         #         # net = torch.nn.DataParallel(net)  # make parallel
         #         cudnn.benchmark = True
+
+        max_iter = len(self.train_dataloader)
         for epoch in range(self.args.epoch):
             self.model.train()
-            for batch_idx, (images, targets) in tqdm(enumerate(self.train_dataloader)):
+            for batch_idx, (images, targets) in enumerate(self.train_dataloader):
                 images = images.to(self.device)
                 targets = [target.to(self.device) for target in targets]
 
@@ -116,10 +119,12 @@ class Trainer(object):
                 loss.backward()
                 self.optimizer.step()
                 self.scheduler.step()
-                if batch_idx % 2 == 0:
-                    loss = loss.item()/len(images)
+                if batch_idx % 1 == 0:
+                    loss = loss.item() / len(images)
+                    loss_l = loss_dict[0].item()/len(images)
+                    loss_c = loss_dict[1].item()/len(images)
                     print(
-                        f'Epoch: {epoch}, Batch_idx:{batch_idx}, loss: {loss:>7f}')
-
+                        f'Epoch: {epoch}, Batch_idx:{batch_idx}, loss: {loss:>7f}, loss_l: {loss_l}, loss_c: {loss_c}')
+                    print()
     def test(self):
         pass
