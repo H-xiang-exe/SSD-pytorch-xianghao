@@ -1,19 +1,22 @@
-import os
-
 import logging
-from tqdm import tqdm
+import os
+import time
+import datetime
+
 import torch
 from torch.utils.data import DataLoader
-from torch.backends import cudnn
 import yaml
 
 from solver.multibox_loss import MultiBoxLoss
 from modeling.ssd300_vgg16 import build_ssd
 from utils import preprocess
-import data
+from data.datasets import voc, coco
+from utils.metric_logger import MetricLogger
+
 
 def do_train(args):
     pass
+
 
 class Trainer(object):
     def __init__(self, args, base_root):
@@ -42,7 +45,7 @@ class Trainer(object):
                                            batch_size=args.batch_size,
                                            # num_workers=args.num_workers,
                                            shuffle=True,
-                                           collate_fn=data.voc.dataset_collate,
+                                           collate_fn=voc.dataset_collate,
                                            drop_last=True,
                                            # num_workers=1
                                            # pin_memory=True
@@ -50,7 +53,7 @@ class Trainer(object):
         self.test_dataloader = DataLoader(self.test_data,
                                           # num_workers=args.num_workers,
                                           shuffle=True,
-                                          collate_fn=data.voc.dataset_collate,
+                                          collate_fn=voc.dataset_collate,
                                           drop_last=True
                                           # pin_memory=True
                                           )
@@ -87,9 +90,9 @@ class Trainer(object):
 
         training_data, test_data = None, None
         if cur_dataset_name == 'VOC2007':
-            training_data = data.voc.VOCDataset(
+            training_data = voc.VOCDataset(
                 self.dataset_info, 'train', preprocess.TrainTransform())
-            test_data = data.voc.VOCDataset(
+            test_data = voc.VOCDataset(
                 self.dataset_info, 'val', preprocess.TrainTransform())
 
         assert training_data is not None and test_data is not None, 'load train/test data failed'
@@ -106,28 +109,53 @@ class Trainer(object):
         #         # net = torch.nn.DataParallel(net)  # make parallel
         #         cudnn.benchmark = True
 
+        # 日志
+        logger = logging.getLogger('SSD.trainer')
+        logger.info("Start training ...")
+        # metric记录
+        meters = MetricLogger()
+        start_training_time = time.time()
+        end = time.time()
+
+        # dataloader数据的批次
         max_iter = len(self.train_dataloader)
-        for epoch in range(self.args.epoch):
-            self.model.train()
-            for batch_idx, (images, targets) in enumerate(self.train_dataloader):
-                images = images.to(self.device)
-                targets = [target.to(self.device) for target in targets]
+        start_iter = 0
+        self.model.train()
+        for iteration, (images, targets) in enumerate(self.train_dataloader, start_iter):
+            images = images.to(self.device)
+            targets = [target.to(self.device) for target in targets]
 
-                outputs = self.model(images)
+            outputs = self.model(images)
 
-                loss_dict = self.criterion(outputs, targets)
-                loss = sum(loss_dict)
+            loss_dict = self.criterion(outputs, targets)
+            loss = sum(loss_dict)
+            meters.update(loss=loss)
 
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-                self.scheduler.step()
-                if batch_idx % 1 == 0:
-                    loss = loss.item() / len(images)
-                    loss_l = loss_dict[0].item()/len(images)
-                    loss_c = loss_dict[1].item()/len(images)
-                    print(
-                        f'Epoch: {epoch}, Batch_idx:{batch_idx}, loss: {loss:>7f}, loss_l: {loss_l}, loss_c: {loss_c}')
-                    print()
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+            self.scheduler.step()
+
+            batch_time = time.time() - end
+            end = time.time()
+            meters.update(time=batch_time)
+
+            if iteration % self.args.log_step == 0:
+                # 剩余训练时间
+                eta_seconds = meters.time.global_avg * (max_iter - iteration + 1)
+                eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
+                logger.info(
+                    meters.delimeter.join([
+                        f"iter: {iteration:06d}]",
+                        f"lr: {self.optimizer.param_groups[0]['lr']:.5f}",
+                        f"{meters}",
+                        f"eta: {eta_string}",
+                        f"mem:{torch.cuda.max_memory_allocated() / 1024.0 / 1024.0}M"
+                    ])
+                )
+            if iteration % self.args.save_step == 0:
+                print("save")
+
+
     def test(self):
         pass

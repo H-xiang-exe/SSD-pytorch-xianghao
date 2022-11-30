@@ -1,1 +1,1 @@
-from . import voc, coco
+from .datasets import coco

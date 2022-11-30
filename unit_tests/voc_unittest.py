@@ -4,7 +4,7 @@ sys.path.append('../')
 import os
 import yaml
 import data
-from data import voc
+from data.datasets import voc
 from utils import preprocess
 from torch.utils.data import DataLoader
 
@@ -19,7 +19,7 @@ training_data = voc.VOCDataset(dataset_info, 'train', preprocess.TrainTransform(
 # print(classes)
 print('Dataloader Preparing')
 dataloader = DataLoader(training_data, batch_size=32, shuffle=True,
-                        collate_fn=data.voc.dataset_collate,
+                        collate_fn=data.datasets.voc.dataset_collate,
                         )
 print('Dataloader Preparing Finished')
 print(f'trainset length: {len(dataloader)}')
