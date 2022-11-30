@@ -7,11 +7,13 @@ import torch
 from torch.utils.data import DataLoader
 import yaml
 
-from solver.multibox_loss import MultiBoxLoss
+from data.datasets import voc, coco
 from modeling.ssd300_vgg16 import build_ssd
 from utils import preprocess
-from data.datasets import voc, coco
 from utils.metric_logger import MetricLogger
+from utils.checkpoint import CheckPointer
+from engine import eval
+from solver.multibox_loss import MultiBoxLoss
 
 
 def do_train(args):
@@ -105,9 +107,9 @@ class Trainer(object):
 
     def train(self):
         self.model.to(self.device)
-        # if self.device == 'cuda':
-        #         # net = torch.nn.DataParallel(net)  # make parallel
-        #         cudnn.benchmark = True
+        if self.device == 'cuda':
+            # net = torch.nn.DataParallel(net)  # make parallel
+            torch.backends.cudnn.benchmark = True
 
         # 日志
         logger = logging.getLogger('SSD.trainer')
@@ -117,11 +119,15 @@ class Trainer(object):
         start_training_time = time.time()
         end = time.time()
 
+        # 保存
+        checkpointer = CheckPointer(self.model, self.optimizer, self.scheduler, './checkpoints/', logger=logger)
+
         # dataloader数据的批次
         max_iter = len(self.train_dataloader)
         start_iter = 0
         self.model.train()
         for iteration, (images, targets) in enumerate(self.train_dataloader, start_iter):
+            iteration = iteration + 1
             images = images.to(self.device)
             targets = [target.to(self.device) for target in targets]
 
@@ -140,9 +146,10 @@ class Trainer(object):
             end = time.time()
             meters.update(time=batch_time)
 
+            # 输出训练日志
             if iteration % self.args.log_step == 0:
                 # 剩余训练时间
-                eta_seconds = meters.time.global_avg * (max_iter - iteration + 1)
+                eta_seconds = meters.time.global_avg * (max_iter - iteration)
                 eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
                 logger.info(
                     meters.delimeter.join([
@@ -153,9 +160,19 @@ class Trainer(object):
                         f"mem:{torch.cuda.max_memory_allocated() / 1024.0 / 1024.0}M"
                     ])
                 )
-            if iteration % self.args.save_step == 0:
-                print("save")
+            # 保存当前模型
+            if iteration % self.args.save_step == 0 and iteration != max_iter:
+                checkpointer.save(f"model_{iteration:06d}")
+            # 评估当前模型
+            if iteration % self.args.eval_step == 0:
+                eval_results = eval.do_evaluation()
+                self.model.train()
+        checkpointer.save(f"model_final")
 
+        # 计算训练时间
+        total_training_time = int(time.time() - start_training_time)
+        total_time_str = str(datetime.timedelta(seconds=total_training_time))
+        logger.info(f"Total training time: {total_time_str}({total_training_time/max_iter}s/it)")
 
     def test(self):
         pass

@@ -30,7 +30,8 @@ misc_arg = parser.add_argument_group('Misc')
 misc_arg.add_argument("--cuda", default=True, type=str2bool, help="Use CUDA to train modeling")
 misc_arg.add_argument("--visdom", default=False, type=str2bool, help="Use Visdom for loss visualization")
 misc_arg.add_argument("--log_step", default=4, type=int, help="The interval for logs recorded")
-misc_arg.add_argument("--save_step", default=5, type=int, help="The interval for logs recorded")
+misc_arg.add_argument("--save_step", default=3, type=int, help="The interval for logs recorded")
+misc_arg.add_argument("--eval_step", default=3, type=int, help="The interval for logs recorded")
 
 
 def get_config():
