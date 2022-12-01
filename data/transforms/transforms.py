@@ -5,6 +5,9 @@ import random
 import numpy as np
 import cv2
 import random
+
+import torch
+import torchvision
 from matplotlib import pyplot as plt
 
 
@@ -48,9 +51,51 @@ class ToPersentCoords(object):
         return image, boxes, labels
 
 
-# ---------------------------------------- 针对像素的数据增强: Begin ----------------------------------------
+class ToTensor(object):
+    def __call__(self, cvimage, boxes=None, labels=None):
+        return torch.from_numpy(cvimage.astype(np.float32)).permute(2, 0, 1), boxes, labels
 
 
+def _inter_union(boxes_a, boxes_b):
+    """求解boxes_a中每个box和boxes_b的交叠的面积
+    Args:
+        boxes_a: Multiple boxes with size of (N, 4), 4 means [xmin, ymin, xmax, ymax]
+        box_b: Multiple boxes with size of (M, 4), 4 means [xmin, ymin, xmax, ymax]
+    Return: intersection and union between boxes_a and boxes_b
+
+    """
+    area_a = (boxes_a[:, 2] - boxes_a[:, 0]) * (boxes_a[:, 3] - boxes_a[:, 1])  # (N)
+    area_b = (boxes_b[:, 2] - boxes_b[:, 0]) * (boxes_b[:, 3] - boxes_b[:, 1])  # (M)
+
+    inter_lt = np.maximum(boxes_a[:, None, :2], boxes_b[:, :2])  # (N, M, 2)
+    inter_rb = np.minimum(boxes_a[:, 2:], boxes_b[:, 2:])  # (N, M, 2)
+
+    inter_wh = np.clip((inter_rb - inter_lt), a_min=0, a_max=np.inf)
+    inter_area = inter_wh[:, :, 0] * inter_wh[:, :, 1]  # (N, M)
+
+    union_area = area_a[:, None] + area_b - inter_area
+    return inter_area, union_area
+
+
+def iou(boxes_a, boxes_b):
+    """
+    求解boxes_a中每个box和boxes_b中每个box的IoU
+
+    Args:
+        boxes_a(np.ndarray[N, 4]): Multiple boxes with size of (nums, 4), 4 means [xmin, ymin, xmax, ymax]
+        boxes_b(np.ndarray[N, 4])
+
+    Returns:
+        iou(np.ndarray[N,M])
+    """
+    inter_area, union_area = _inter_union(boxes_a, boxes_b)
+    iou = inter_area / union_area  # (N, M)
+    return iou
+
+
+# ----------------------------------------------------------------------------------
+#  针对像素的数据增强
+# ----------------------------------------------------------------------------------
 class ConvertFromInts(object):
     """convert image to float32 from int"""
 
@@ -185,11 +230,24 @@ class PhotometricDistort(object):
         return self.rand_light_noise(im, boxes, labels)
 
 
-# ---------------------------------------- 针对像素的数据增强：End ----------------------------------------
+class SubstractMeans(object):
+    def __init__(self, mean) -> None:
+        """
 
-# ---------------------------------------- 针对图像的数据增强：Begin ----------------------------------------
-# 包括对图像本身的改变，对标注信息的改变
+        Args:
+            mean (_type_): _description_
+        """
+        self.mean = np.array(mean, dtype=np.float32)
 
+    def __call__(self, image, boxes=None, labels=None):
+        image = image.astype(np.float32)
+        image -= self.mean
+        return image.astype(np.float32), boxes, labels
+
+
+# ----------------------------------------------------------------------------------------
+#  针对图像的数据增强——包括对图像本身的改变，对标注信息的改变
+# ----------------------------------------------------------------------------------------
 class RandomMirror(object):
     """随机镜像：将图像沿着竖轴中心翻转"""
 
@@ -247,32 +305,6 @@ class Expand(object):
         return image, boxes, labels
 
 
-def intersect(boxes_a, box_b):
-    """求解boxes_a中每个box和box_b的交叠的面积
-    Args:
-        boxes_a: Multiple boxes with size of (nums, 4), 4 means [xmin, ymin, xmax, ymax]
-        box_b: a box with size of (4)
-    """
-    max_xy = np.minimum(boxes_a[:, 2:], box_b[2:])
-    min_xy = np.maximum(boxes_a[:, :2], box_b[:2])
-    inter = np.clip((max_xy - min_xy), a_min=0, a_max=np.inf)
-    return inter[:, 0] * inter[:, 1]
-
-
-def iou(boxes_a, box_b):
-    """求解boxes_a中每个box和box_b的IoU
-    Args:
-        boxes_a: Multiple boxes with size of (nums, 4), 4 means [xmin, ymin, xmax, ymax]
-        box_b: a box with size of (4)
-    """
-    inter = intersect(boxes_a, box_b)
-    area_a = (boxes_a[:, 2] - boxes_a[:, 0]) * (boxes_a[:, 3] - boxes_a[:, 1])
-    area_b = (box_b[2] - box_b[0]) * (box_b[3] - box_b[1])
-
-    union = area_a + area_b - inter
-    return inter / union
-
-
 class RandomSampleCrop(object):
     """随机裁剪：随机裁掉原图中的一部分， 然后检查边界框或者目标整体是否被裁掉，如果目标整体被裁掉，则舍弃这次随机过程"""
 
@@ -320,10 +352,10 @@ class RandomSampleCrop(object):
                 top = np.random.uniform(0, height - h)
 
                 # 由此确定图像所在坐标
-                rect = np.array(
-                    [int(left), int(top), int(left + w), int(top + h)])
+                rect = np.array([int(left), int(top), int(left + w), int(top + h)])
                 # 求解原始的boxes和新的图像的IoU
-                overlap = iou(boxes, rect)
+
+                overlap = iou(boxes, np.expand_dims(rect, axis=0))
 
                 if overlap.max() < min_iou or overlap.min() > max_iou:
                     continue
@@ -349,8 +381,6 @@ class RandomSampleCrop(object):
                 return current_img, current_boxes, current_labels
 
 
-# ---------------------------------------- 针对图像的数据增强：End ----------------------------------------
-
 class Resize(object):
     def __init__(self, size=300) -> None:
         """Resize image shape to (size, size)
@@ -363,45 +393,6 @@ class Resize(object):
     def __call__(self, image, boxes=None, labels=None):
         image = cv2.resize(image, (self.size, self.size))
         return image, boxes, labels
-
-
-class SubstractMeans(object):
-    def __init__(self, mean) -> None:
-        """
-
-        Args:
-            mean (_type_): _description_
-        """
-        self.mean = np.array(mean, dtype=np.float32)
-
-    def __call__(self, image, boxes=None, labels=None):
-        image = image.astype(np.float32)
-        image -= self.mean
-        return image.astype(np.float32), boxes, labels
-
-
-class TrainTransform(object):
-    def __init__(self, size=300, mean=(104, 117, 123)):
-        self.mean = mean
-        self.size = size
-        self.augment = Compose([
-            ConvertFromInts(),
-            ToAbsoluteCoords(),
-            PhotometricDistort(),
-            Expand(self.mean),
-            RandomSampleCrop(),
-            RandomMirror(),
-            ToPersentCoords(),
-            Resize(self.size),
-            SubstractMeans(self.mean)
-        ])
-
-    def __call__(self, image, boxes, labels):
-        """
-        Args:
-            boxes(ndarray): [[xmin, ymin, xmax, ymax], ...]
-        """
-        return self.augment(image, boxes, labels)
 
 
 class TestTransform(object):
@@ -457,54 +448,3 @@ class TestTransform(object):
         new_image = new_image.astype(np.float32)
         new_image -= self.mean
         return new_image, boxes, labels
-
-
-if __name__ == '__main__':
-    img_path = "../batchdata/VOCdevkit/VOC2007/JPEGImages/000012.jpg"
-    image = cv2.imread(img_path)
-    # print(image)
-    boxes = np.array([[156, 97, 351, 270]], dtype=np.float32)
-    height, width, channels = image.shape
-    # print(height, width)
-    boxes[:, ::2] /= width
-    boxes[:, 1::2] /= height
-    # print(boxes)
-    labels = np.array([3])
-
-    # 测试SSDAugmentation
-    plt.figure()
-    plt.subplot(121)
-    plt.imshow(image)
-    augument = TrainTransform()
-    image, boxes, labels = augument(image, boxes, labels)
-    cv2.imshow('image', image)  # BGR
-    cv2.waitKey(0)
-    tmp = []
-    for h in range(image.shape[0]):
-        for w in range(image.shape[1]):
-            b, g, r = image[h][w]
-            if b > 0 or g > 0 or r > 0:
-                tmp.append([h, w, b, g, r])
-    print(tmp)
-    plt.subplot(122)  # RGB
-    plt.imshow(image)
-    plt.show()
-
-    # # 测试TestTransform
-    # # cv2.imshow('image', image)
-    # # cv2.waitKey(0)
-    # plt.figure()
-    # plt.subplot(121)
-    # pre_img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    # plt.imshow(pre_img)
-    # test_transform = TestTransform()
-    # image, boxes, labels = test_transform(image)
-    # print(image.shape)
-    # # cv2.imshow('image after test_transform', image)
-    # # cv2.waitKey(0)
-    # plt.subplot(122)
-    # suf_img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    # plt.imshow(suf_img)
-    #
-    # plt.colorbar()
-    # plt.show()

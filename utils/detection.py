@@ -5,8 +5,7 @@ import torch.nn as nn
 import numpy as np
 import torchvision
 
-from . import preprocess
-import prior_anchor
+from data.transforms import transforms
 
 
 class Detection(object):

@@ -7,16 +7,30 @@ import torch
 from torch.utils.data import DataLoader
 import yaml
 
-from data.datasets import voc, coco
+from data.datasets import voc
 from modeling.ssd300_vgg16 import build_ssd
-from utils import preprocess
+from data.transforms import transforms
 from utils.metric_logger import MetricLogger
 from utils.checkpoint import CheckPointer
 from engine import eval
 from solver.multibox_loss import MultiBoxLoss
+from data import transforms
 
+def do_train(model, train_data_loader, optimizer, scheduler, checkpointer, device, args):
+    """
 
-def do_train(args):
+    Args:
+        model:
+        train_data_loader:
+        optimizer:
+        scheduler:
+        checkpointer:
+        device:
+        args:
+
+    Returns:
+
+    """
     pass
 
 
@@ -93,9 +107,9 @@ class Trainer(object):
         training_data, test_data = None, None
         if cur_dataset_name == 'VOC2007':
             training_data = voc.VOCDataset(
-                self.dataset_info, 'train', preprocess.TrainTransform())
+                self.dataset_info, 'train', transforms.build_transform(), transforms.build_target_transform())
             test_data = voc.VOCDataset(
-                self.dataset_info, 'val', preprocess.TrainTransform())
+                self.dataset_info, 'val', transforms.build_target_transform(), transforms.build_target_transform())
 
         assert training_data is not None and test_data is not None, 'load train/test data failed'
         return training_data, test_data
@@ -153,7 +167,7 @@ class Trainer(object):
                 eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
                 logger.info(
                     meters.delimeter.join([
-                        f"iter: {iteration:06d}]",
+                        f"iter: {iteration:06d}",
                         f"lr: {self.optimizer.param_groups[0]['lr']:.5f}",
                         f"{meters}",
                         f"eta: {eta_string}",

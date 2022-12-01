@@ -5,7 +5,7 @@ import os
 import yaml
 import data
 from data.datasets import voc
-from utils import preprocess
+from data.transforms import transforms
 from torch.utils.data import DataLoader
 
 BASE_DIR = '/root/autodl-tmp/SSD-pytorch-xianghao/'
