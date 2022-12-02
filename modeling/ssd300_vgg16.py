@@ -11,7 +11,7 @@ class SSD300_VGG16(nn.Module):
     The network is composed of a base VGG network followed by the added multibox conv layers.Each multibox layer branchs into:
     """
 
-    def __init__(self, phase, size, base, extras, head, num_classes, config):
+    def __init__(self, phase, size, base, extras, head, num_classes, config=None):
         """
         Args:
             phase(string): "test" or "train"
@@ -23,7 +23,7 @@ class SSD300_VGG16(nn.Module):
         super(SSD300_VGG16, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
-        self.cfg = config
+        # self.cfg = config
 
         # SSD network
         self.vgg = nn.ModuleList(base)
@@ -141,7 +141,7 @@ def detection_head(vgg, extra_layers):
     return location_layer, confidence_layer
 
 
-def build_ssd(phase, dataset_config, size=(300, 300), num_classes=21):
+def build_ssd(phase, dataset_config=None, size=(300, 300), num_classes=21):
     '''
     Args:
         phase: 'train' or 'test'
@@ -154,4 +154,4 @@ def build_ssd(phase, dataset_config, size=(300, 300), num_classes=21):
     base_ = vgg()
     extras_ = add_extras()
     head_ = detection_head(base_, extras_)
-    return SSD300_VGG16(phase, size, base_, extras_, head_, num_classes, dataset_config)
+    return SSD300_VGG16(phase, size, base_, extras_, head_, num_classes)

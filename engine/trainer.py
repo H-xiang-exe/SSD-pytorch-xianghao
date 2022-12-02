@@ -16,6 +16,7 @@ from engine import eval
 from solver.multibox_loss import MultiBoxLoss
 from data import transforms
 
+
 def do_train(model, train_data_loader, optimizer, scheduler, checkpointer, device, args):
     """
 
@@ -93,7 +94,7 @@ class Trainer(object):
     def _get_dataset_info(self):
         # 获得所有数据集的相关信息
         datasets_info_path = os.path.join(
-            self.base_root, 'configs/datasets.yaml')
+            self.base_root, 'configs/coco.yaml')
         with open(datasets_info_path, 'r', encoding='utf-8') as f:
             datasets_info = yaml.safe_load(f)
         # 根据命令行的args获得当前数据集的信息（包括数据根目录、类别数等）
@@ -186,7 +187,7 @@ class Trainer(object):
         # 计算训练时间
         total_training_time = int(time.time() - start_training_time)
         total_time_str = str(datetime.timedelta(seconds=total_training_time))
-        logger.info(f"Total training time: {total_time_str}({total_training_time/max_iter}s/it)")
+        logger.info(f"Total training time: {total_time_str}({total_training_time / max_iter}s/it)")
 
     def test(self):
         pass

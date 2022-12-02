@@ -9,7 +9,7 @@ from data.transforms import transforms
 from torch.utils.data import DataLoader
 
 BASE_DIR = '/root/autodl-tmp/SSD-pytorch-xianghao/'
-datasets_info_path = os.path.join(BASE_DIR, 'configs/datasets.yaml')
+datasets_info_path = os.path.join(BASE_DIR, 'configs/coco.yaml')
 with open(datasets_info_path, 'r', encoding='utf-8') as f:
     dataset_info = yaml.safe_load(f)['VOC2007']
 
