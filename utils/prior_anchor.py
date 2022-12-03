@@ -66,55 +66,25 @@ class PriorAnchor(object):
             step_h = self.img_height / feature_h
 
             # 获得网格中心点的横坐标和纵坐标
-            linw = np.linspace(0.5 * step_w, self.img_width - 0.5 * step_w, feature_w)
-            linh = np.linspace(0.5 * step_h, self.img_height - 0.5 * step_h, feature_h)
-            centers_w, centers_h = np.meshgrid(linw, linh)
-            centers_w = centers_w.reshape(-1, 1)  # (h*w, 1)
-            centers_h = centers_h.reshape(-1, 1)  # (h*w, 1)
+            linx = np.linspace(0.5 * step_w, self.img_width - 0.5 * step_w, feature_w)
+            liny = np.linspace(0.5 * step_h, self.img_height - 0.5 * step_h, feature_h)
+            centers_x, centers_y = np.meshgrid(linx, liny)  # (h*w)
 
-            # if layer_height == 3:
-            #     fig = plt.figure()
-            #     ax = fig.add_subplot(111)
-            #     plt.axis('equal')
-            #     plt.ylim(-50, 350)
-            #     plt.xlim(-50, 350)
-            #     plt.scatter(centers_w, centers_h)
-
-            # 根据网格中心点和每个纵横比获得每个盒子的坐标位置（左上角，右下角）
+            # 每个网格应该有的anchor数量
             num_anchor_ = 2 * len(self.aspect_rations[idx])  # 4 or 6
-            anchor_boxes = np.concatenate((centers_w, centers_h), axis=1)  # (center_nums, 2), center_nums= h*w
-            # 一个中心点有num_anchor_个先验包围盒，每个包围盒用2个坐标点才能描述，因此对于每个网格，要描述它对应的所有box，需要2*num_anchor个点，因此anchor_boxes要在原来每个点的基础上扩展2*num_anchor_倍，然后分别重新赋值
-            anchor_boxes = np.tile(anchor_boxes, (1, 2 * num_anchor_))
-            # 对于每个网格，坐标分别为(box1_left, box1_top, box1_right, box1_down, box2_left, box2_top, box2_right, box2_down, ...)
-            # 求解每个网格的所有box的left, top, right, down坐标值
-            anchor_boxes[:, ::4] -= boxes_width * 0.5  # 左上角横坐标
-            anchor_boxes[:, 1::4] -= boxes_height * 0.5  # 左上角纵坐标
-            anchor_boxes[:, 2::4] += boxes_width * 0.5  # 右下角横坐标
-            anchor_boxes[:, 3::4] += boxes_height * 0.5  # 右下角纵坐标
+            centers_x = np.repeat(centers_x, num_anchor_).reshape(-1, 1)  # (h*w*num_anchor_, 1)
+            centers_y = np.repeat(centers_y, num_anchor_).reshape(-1, 1)
+            boxes_width = np.tile(boxes_width, (feature_h * feature_w, 1)).reshape(-1, 1)
+            boxes_height = np.tile(boxes_height, (feature_h * feature_w, 1)).reshape(-1, 1)
+            anchor_boxes = np.concatenate([centers_x, centers_y, boxes_width, boxes_height], axis=-1)
+            print(f"anchors: {anchor_boxes.shape}")
 
-            # if layer_height == 3:
-            #     rect1 = plt.Rectangle((anchor_boxes[4, 0], anchor_boxes[4, 1]), box_widths[0], box_heights[0],
-            #     color='r', fill=False)
-            #     rect2 = plt.Rectangle((anchor_boxes[4, 4], anchor_boxes[4, 5]), box_widths[1], box_heights[1],
-            #     color='r',fill=False)
-            #     rect3 = plt.Rectangle((anchor_boxes[4, 8], anchor_boxes[4, 9]), box_widths[2], box_heights[2],
-            #     color='r',fill=False)
-            #     rect4 = plt.Rectangle((anchor_boxes[4, 12], anchor_boxes[4, 13]), box_widths[3], box_heights[3],
-            #     color='r',fill=False)
-            #
-            #     ax.add_patch(rect1)
-            #     ax.add_patch(rect2)
-            #     ax.add_patch(rect3)
-            #     ax.add_patch(rect4)
-            #
-            #     plt.show()
             # 将先验框变成小数模式
             # 归一化
             anchor_boxes[:, ::2] /= self.img_width
             anchor_boxes[:, 1::2] /= self.img_height
-            anchor_boxes = anchor_boxes.reshape(-1, 4)  # (feature_h*feature_w*4(6), 4)
+            anchor_boxes = np.clip(anchor_boxes, a_min=0, a_max=1.0)
 
-            anchor_boxes = np.minimum(np.maximum(anchor_boxes, 0.0), 1.0)
             # print(anchor_boxes.shape)
             output_boxes.append(anchor_boxes)
         output_boxes = np.concatenate(output_boxes, axis=0)
@@ -124,7 +94,7 @@ class PriorAnchor(object):
 
 if __name__ == "__main__":
     # 输入的图片大小为(300, 300)
-    input_shape = [300, 300]
+    input_shape = (300, 300)
     anchor = PriorAnchor(input_shape)
     total_anchor_boxes = anchor()
-    # print(total_anchor_boxes[0])
+    print(total_anchor_boxes[5776:5784])

@@ -51,7 +51,7 @@ class VOCDataset(torch.utils.data.Dataset):
         if self.transform is not None:
             image, boxes, labels = self.transform(image, boxes, labels)
         if self.target_transform is not None:
-            image, boxes, labels = self.target_transform(image, boxes, labels)
+            boxes, labels = self.target_transform(boxes, labels)
 
         return image, boxes, labels
 
@@ -90,7 +90,7 @@ class VOCDataset(torch.utils.data.Dataset):
             is_difficult.append(difficult)
 
         return np.array(boxes, dtype=np.float32), np.array(labels, dtype=np.int64), np.array(is_difficult,
-                                                                                           dtype=np.uint8)
+                                                                              dtype=np.uint8)
 
     def _get_image(self, image_id):
         image_file = os.path.join(self.data_dir, "JPEGImages", f"{image_id}.jpg")

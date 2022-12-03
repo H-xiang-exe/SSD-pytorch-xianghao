@@ -19,7 +19,7 @@ class DatasetPath(object):
     def get_name(name):
         if 'voc' in name:
             voc_root = DatasetPath.DATA_DIR
-            if 'VOC_ROOT' in os.environ['VOC_ROOT']:
+            if 'VOC_ROOT' in os.environ:
                 voc_root = os.environ['VOC_ROOT']
             attrs = DatasetPath.DATASETS[name]
             args = dict(

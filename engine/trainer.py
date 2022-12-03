@@ -188,6 +188,3 @@ class Trainer(object):
         total_training_time = int(time.time() - start_training_time)
         total_time_str = str(datetime.timedelta(seconds=total_training_time))
         logger.info(f"Total training time: {total_time_str}({total_training_time / max_iter}s/it)")
-
-    def test(self):
-        pass

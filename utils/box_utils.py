@@ -2,80 +2,76 @@ import torch
 import torchvision
 
 
-def point_form(boxes):
-    """Convert prior_boxes to (xmin, ymin, xmax, yamx) from (center_x, cengter_y, width, height)
+def corner_form_to_center_form(boxes):
+    """Convert [xmin, ymin, xmax, ymax] to [center_x, center_y, w, h]
+    Args:
+        boxes(torch.Tensor)
+    """
+    w = boxes[:, 2] - boxes[:, 0]
+    h = boxes[:, 3] - boxes[:, 1]
+    center_x = (boxes[:, 0] + boxes[:, 2]) / 2
+    center_y = (boxes[:, 1] + boxes[:, 3]) / 2
+    return torch.cat([center_x, center_y, w, h], dim=-1)
+
+
+def center_form_to_corner_form(locations):
+    """Convert [center_x, center_y, w, h] to [xmin, ymin, xmax, ymax]"""
+    xmin = locations[:, 0] - locations[:, 2] / 2
+    xmax = locations[:, 0] + locations[:, 2] / 2
+    ymin = locations[:, 1] - locations[:, 3] / 2
+    ymax = locations[:, 1] + locations[:, 3] / 2
+    return torch.cat([xmin, ymin, xmax, ymax], dim=-1)
+
+
+def assign_priors(gt_boxes, gt_labels, corner_form_priors, iou_threshold):
+    """
 
     Args:
-        boxes: (torch.tensor) boxes location, shape: (num_boxes, 4) 4 means(center_x, center_y, width, height)
+        gt_boxes(torch.Tensor): corner form boxes. Shape:(num_objs, 4)
+        gt_labels(torch.Tensor): (num_objs)
+        corner_form_priors(torch.Tensor): Shape: (num_priors, 4)
+        iou_threshold:
 
     Returns:
-        boxes: (torch.tensor) boxes location, shape: (num_boxes, 4) 4 means (xmin, ymin, xmax, ymax)
+        target_boxes(torch.Tensor): corner form boxes.
+        target_labels(torch.Tensor)
     """
-    return torch.cat([boxes[:, :2] - boxes[:, 2:] / 2, boxes[:, :2] + boxes[:, 2:] / 2], dim=-1)
+    # 计算所有priors和gt_boxes的iou
+    ious = torchvision.ops.box_iou(corner_form_priors, gt_boxes)  # (num_priors, num_objs)
+
+    # 计算对于每个prior而言，与所有gt boxes的iou中最大的iou及其对应的gt box 索引
+    best_target_iou_per_prior, best_target_index_per_prior = torch.max(ious, dim=1)
+    # 计算对于每个gt box而言，与所有priors 的iou中最大的iou及其对应的prior box 索引
+    best_prior_iou_per_gt, best_prior_index_per_gt = torch.max(ious, dim=0)
+
+    # 将每个gt对应的best prior的best target变成这个gt
+    for gt_index, prior_index in enumerate(best_prior_index_per_gt):
+        best_target_index_per_prior[prior_index] = gt_index
+    # 将gt对应的prior的iou全变成2
+    best_target_iou_per_prior.index_fill_(0, best_prior_index_per_gt, 2)
+
+    target_labels = gt_labels[best_target_index_per_prior]
+    target_labels[best_target_iou_per_prior < iou_threshold] = 0  # 背景类
+    target_boxes = gt_boxes[best_target_index_per_prior]
+
+    return target_boxes, target_labels
 
 
-def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
-    """将每个prior box和与其具有最高IOU的gt box进行匹配，对bounding boxes进行编码，然后返回与prior boxes匹配的
-    gt boxes的索引以及相应的置信度和位置
-
-    Args:
-        threshold:
-        truths: ground truth boxes, (N, 4)
-        priors: prior boxes in corner-point offset (num_priors, 4)
-        variances:
-        labels: 对于单张图片的所有目标物体的标签 shape: (num_objects)
-        loc_t:
-        conf_t:
-        idx:
-
-    Returns:
-
-    """
-    # 获得truth和priors的iou
-    overlaps = torchvision.ops.box_iou(truths, priors)  # (N,M)
-
-    # ------------ 先验框和目标框互相匹配 ---------------
-    # 以下的实现方式从理论上并不能完全保证gt box都能匹配上prior box
-    # 每个目标框优先匹配与其IOU最大的先验框
-    best_prior_overlap, best_prior_idx = torch.max(overlaps, dim=1)  # (num_objs)
-
-    # 每个先验框匹配与其IOU最大的目标框
-    best_truth_overlap, best_truth_idx = torch.max(overlaps, dim=0)  # (num_priors)
-
-    torch.index_fill(best_truth_overlap, 0, best_prior_idx, 2)
-    # TODO refactor: index best_prior with long tensor
-    # ensure every gt mathes with its prior of max overlap
-    for j in range(best_prior_idx.size()[0]):
-        best_truth_idx[best_prior_idx[j]] = j
-    matches = truths[best_truth_idx]  # 获得所有prior box的目标标签框  shape: (num_priors, 4)
-    # 获得所有prior box的目标框的类别(num_priors)
-    conf = labels[best_truth_idx] + 1  # 背景类标号为0，其他分类为1-20
-
-    # 对于num_priors个盒子，它们和对应的truth box的iou如果小于某个阈值，我们将其视为负样本，令其分类标签为0
-    conf[best_truth_overlap < threshold] = 0
-    loc = encode(matches, priors, variances)  # 和prior boxes相匹配的gt boxes经过variance编码的target boxes
-    loc_t[idx] = loc
-    conf_t[idx] = conf
-
-
-def encode(matched, priors, variances):
+def encode(center_form_target_boxes, center_form_priors, center_variance, size_variance):
     """将prior boxes的variance编码到与prior boxes相匹配（基于Iou）的gt boxes。
 
     Args:
-        matched: (tensor) coordinates of gt boxes matched with each prior box. Shape:[num_priors, 4]
-        priors: (tensor) prior boxes in corner-point form. Shape: [num_priors, 4]
-        variances: (list[float]) Variances of prior boxes
+        center_form_target_boxes(torch.Tensor): coordinates of target boxes matched with each prior box. Shape:[num_priors, 4]
+        center_form_priors(torch.Tensor): prior boxes. Shape: [num_priors, 4]
+        center_variance(float): variance for cx, cy
+        size_variance(float): variance for w, h.
 
     Returns:
-        encoded boxes: (tensor), 和prior boxes相匹配的经过了variance编码之后的gt boxes.
-            Shape: [num_boxes, 4]
+        target_locations(torch.Tensor): 和prior boxes相匹配的经过了variance编码之后的gt boxes. Shape: [num_priors, 4]
     """
-    # (left or top + right or bottom)/2 - prior_center_x or prior_center_y
-    # = gt_center_x or gt_center_y - prior_center_x or prior_center_y
-    g_cxcy = (matched[:, :2] + matched[:, 2:]) / 2 - priors[:, :2]
     # encode variance
-    g_cxcy /= (variances[0] * priors[:, 2:])  # (num_priors, 2) 2 means encoded cx,cy
-    g_wh = (matched[:, 2:] - matched[:, :2]) / 2 / priors[:, 2:]
-    g_wh = torch.log(g_wh) / variances[1]  # (num_priors, 2) 2 means encoded w,h
-    # return target for smooth_l1_loss
-    return torch.cat([g_cxcy, g_wh], dim=1)  # (num_priors, 4)
+    locations_centers = (center_form_target_boxes[:, :2] - center_form_priors[:, :2]) / (
+            center_form_priors[:, 2:] * center_variance)  # (num_priors,2)
+    locations_wh = torch.log(center_form_target_boxes[:, 2:] / center_form_priors[:, 2:]) / size_variance
+
+    return torch.cat([locations_centers, locations_wh], dim=-1)

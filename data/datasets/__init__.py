@@ -10,12 +10,7 @@ _DATASETS = {
 }
 
 
-def build_dataset(cfg, is_train=True):
-    # ------------------------------------------------------------------------------------------ #
-    # 获得数据集列表
-    # ------------------------------------------------------------------------------------------ #
-    dataset_list = cfg.DATASETS.TRAIN if is_train else cfg.DATASETS.TEST
-
+def build_dataset(dataset_list, transform=None, target_transform=None, is_train=True):
     datasets = []
     # ------------------------------------------------------------------------------------------ #
     # 逐个处理单个数据集
@@ -24,7 +19,11 @@ def build_dataset(cfg, is_train=True):
         # 获得数据集信息
         data = DatasetPath.get_name(dataset_name)
         # 获得数据集所在目录及split
-        args = data.args
+        args = data['args'] # VOCDataset: data_dir, split
+        # 增加transformer参数
+        args['transform'] = transform
+        args['target_transform'] = target_transform
+
         # 获得数据集对应的类，如 VOCDataset
         factory = _DATASETS[data['factory']]
 
