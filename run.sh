@@ -1,2 +1,1 @@
-python main.py \
---batch_size 4
+python main.py --config_file configs/voc0712.yaml

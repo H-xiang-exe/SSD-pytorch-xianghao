@@ -42,6 +42,7 @@ def do_train(model, train_dataloader, loss_fn,optimizer, scheduler, checkpointer
 
     # dataloader数据的批次
     max_iter = len(train_dataloader)
+    logger.info(f"max_iter:{max_iter}")
     start_iter = 0
     model.train()
     for iteration, (images, targets, _) in enumerate(train_dataloader, start_iter):
