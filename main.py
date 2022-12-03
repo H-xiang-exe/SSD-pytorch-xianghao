@@ -5,11 +5,11 @@ from torch.utils.data import DataLoader
 
 from config import parse, cfg
 from modeling import build_model
-from engine.trainer import Trainer
 from utils.logger import setup_logger
 from utils.checkpoint import CheckPointer
-
-
+from data.build import make_data_loader
+from engine.trainer import do_train
+from solver.multibox_loss import MultiBoxLoss
 def train(cfg, args):
     # -------------------------------------------------------------------------------------- #
     # 建立logger
@@ -44,9 +44,23 @@ def train(cfg, args):
     checkpointer = CheckPointer(model, optimizer, scheduler, './checkpoints/', logger=logger)
 
     # -------------------------------------------------------------------------------------- #
-    # 构建数据集、
+    # 构建Dataloader
     # -------------------------------------------------------------------------------------- #
-    training_data = cfg
+    training_dataloader = make_data_loader(cfg)
+    data_iter = iter(training_dataloader)
+    images, targets, ids = next(data_iter)
+    # print(targets['boxes'])
+
+
+    # -------------------------------------------------------------------------------------- #
+    # 构建loss function
+    # -------------------------------------------------------------------------------------- #
+    loss_fn = MultiBoxLoss(cfg.MODEL.NEG_POS_RATIO)
+
+    model = do_train(model, training_dataloader, loss_fn, optimizer, scheduler, checkpointer, device, args)
+    return model
+
+
 
 if __name__ == '__main__':
     # -------------------------------------------------------------------------------------- #

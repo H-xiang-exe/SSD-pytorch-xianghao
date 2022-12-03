@@ -1,12 +1,13 @@
 from .transforms import *
 from .target_transform import SSDTargetTransform
 
+from utils.prior_anchor import PriorAnchor
+
 
 def build_transform(is_train=True):
     if is_train:
         transform = [
             ConvertFromInts(),
-            ToAbsoluteCoords(),
             PhotometricDistort(),
             Expand((104, 117, 123)),
             RandomSampleCrop(),
@@ -26,5 +27,7 @@ def build_transform(is_train=True):
     return transform
 
 
-def build_target_transform():
-    return SSDTargetTransform()
+def build_target_transform(cfg):
+    center_form_priors = PriorAnchor((300, 300))()
+    return SSDTargetTransform(center_form_priors, cfg.MODEL.CENTER_VARIANCE, cfg.MODEL.SIZE_VARIANCE,
+                              cfg.MODEL.THRESHOLD)

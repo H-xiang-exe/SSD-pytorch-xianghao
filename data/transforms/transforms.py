@@ -25,17 +25,6 @@ class Compose(object):
             img, boxes, labels = t(img, boxes, labels)
         return img, boxes, labels
 
-
-class ToAbsoluteCoords(object):
-    def __call__(self, image, boxes=None, labels=None):
-        height, width, channels = image.shape
-        boxes[:, 0] *= width
-        boxes[:, 2] *= width
-        boxes[:, 1] *= height
-        boxes[:, 3] *= height
-        return image, boxes, labels
-
-
 class ToPersentCoords(object):
     def __call__(self, image, boxes=None, labels=None):
         """
@@ -301,7 +290,6 @@ class Expand(object):
             boxes = boxes.copy()
             boxes[:, :2] += (int(left), int(top))  # [xmin, ymin]
             boxes[:, 2:] += (int(left), int(top))  # [xmax, ymax]
-
         return image, boxes, labels
 
 
@@ -365,7 +353,7 @@ class RandomSampleCrop(object):
                 # box中心点坐标
                 center = (boxes[:, :2] + boxes[:, 2:]) / 2.0
                 m1 = (rect[0] < center[:, 0]) * (rect[1] < center[:, 1])
-                m2 = (rect[2] > center[:, 0]) * (rect[3] < center[:, 1])
+                m2 = (rect[2] > center[:, 0]) * (rect[3] > center[:, 1])
                 # m1 m2均为正时保留
                 mask = m1 * m2
                 if not mask.any():  # any表示任意一个元素为true，则结果为true
@@ -374,10 +362,8 @@ class RandomSampleCrop(object):
                 current_boxes = boxes[mask, :].copy()
                 current_labels = labels[mask]
                 # 对于中心点在裁剪后图像区域的box的边界重新设定，原边界有可能超出了裁剪后图像区域
-                current_boxes[:, :2] = np.maximum(
-                    current_boxes[:, :2], rect[:2]) - rect[:2]
-                current_boxes[:, 2:] = np.minimum(
-                    current_boxes[:, 2:], rect[2:]) - rect[2:]
+                current_boxes[:, :2] = np.maximum(current_boxes[:, :2], rect[:2]) - rect[:2]
+                current_boxes[:, 2:] = np.minimum(current_boxes[:, 2:], rect[2:]) - rect[:2]
                 return current_img, current_boxes, current_labels
 
 

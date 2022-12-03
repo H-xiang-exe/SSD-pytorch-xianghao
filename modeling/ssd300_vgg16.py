@@ -141,7 +141,7 @@ def detection_head(vgg, extra_layers):
     return location_layer, confidence_layer
 
 
-def build_ssd(phase, dataset_config=None, size=(300, 300), num_classes=21):
+def build_ssd(phase, dataset_config=None, size=300, num_classes=21):
     '''
     Args:
         phase: 'train' or 'test'

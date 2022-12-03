@@ -77,7 +77,6 @@ class PriorAnchor(object):
             boxes_width = np.tile(boxes_width, (feature_h * feature_w, 1)).reshape(-1, 1)
             boxes_height = np.tile(boxes_height, (feature_h * feature_w, 1)).reshape(-1, 1)
             anchor_boxes = np.concatenate([centers_x, centers_y, boxes_width, boxes_height], axis=-1)
-            print(f"anchors: {anchor_boxes.shape}")
 
             # 将先验框变成小数模式
             # 归一化

@@ -6,6 +6,8 @@ import cv2
 import numpy as np
 import xml.etree.ElementTree as ET  # 一种灵活的容器对象，用于在内存中存储结构化数据
 
+from structures.container import Container
+
 
 class VOCDataset(torch.utils.data.Dataset):
     """输入数据集名字，输出处理好的数据"""
@@ -52,8 +54,8 @@ class VOCDataset(torch.utils.data.Dataset):
             image, boxes, labels = self.transform(image, boxes, labels)
         if self.target_transform is not None:
             boxes, labels = self.target_transform(boxes, labels)
-
-        return image, boxes, labels
+        targets = Container(boxes=boxes, labels=labels)
+        return image, targets, idx
 
     def _get_image_ids(self):
         """获取图片训练/测试集图片id的list"""
@@ -142,23 +144,3 @@ class VOCDataset(torch.utils.data.Dataset):
         # 获得box坐标（不做归一化）
         gt = self.target_transform(anno, self.classes, 1, 1)  # ([xmin, ymin, xmax, ymax, cls], ...)
         return img_id, gt
-
-
-def dataset_collate(batch):
-    """自定义collate fn用于处理解决批量图片的annotations的stack问题，由于每张图片对应的annotation(bounding boxes
-    数量不同，默认的collate fn会报错，因此此处自定义collate
-    Args:
-        batch: (tuple) A tuple of tensor images and lists of annotations
-
-    Returns:
-        A tuple containing:
-            1) (tensor) batch of images stacked on their 0 dim
-            2) (list of tensors) annotations for a given image are stacked on 0 dim
-    """
-    targets = []
-    imgs = []
-    for img, box in batch:
-        imgs.append(img)
-        targets.append(box)
-    imgs = torch.stack(imgs, dim=0)
-    return imgs, targets

@@ -10,7 +10,7 @@ parser = argparse.ArgumentParser(
 
 # Data
 data_arg = parser.add_argument_group('Data')
-data_arg.add_argument('--config_file', default="configs/voc0712.yaml", metavar="FILE", help="path to config file",
+data_arg.add_argument('--config_file', default="configs/voc07.yaml", metavar="FILE", help="path to config file",
                       type=str)
 
 # solver
@@ -24,7 +24,7 @@ solver_arg.add_argument("--weight_decay", default=5e-4, type=float, help="weight
 misc_arg = parser.add_argument_group('Misc')
 misc_arg.add_argument("--cuda", default=True, type=str2bool, help="Use CUDA to train modeling")
 misc_arg.add_argument("--visdom", default=False, type=str2bool, help="Use Visdom for loss visualization")
-misc_arg.add_argument("--log_step", default=4, type=int, help="The interval for logs recorded")
+misc_arg.add_argument("--log_step", default=2, type=int, help="The interval for logs recorded")
 misc_arg.add_argument("--save_step", default=3, type=int, help="The interval for logs recorded")
 misc_arg.add_argument("--eval_step", default=3, type=int, help="The interval for logs recorded")
 

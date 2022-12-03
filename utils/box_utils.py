@@ -1,5 +1,8 @@
+import math
+
 import torch
 import torchvision
+import torch.nn.functional as F
 
 
 def corner_form_to_center_form(boxes):
@@ -7,20 +10,16 @@ def corner_form_to_center_form(boxes):
     Args:
         boxes(torch.Tensor)
     """
-    w = boxes[:, 2] - boxes[:, 0]
-    h = boxes[:, 3] - boxes[:, 1]
-    center_x = (boxes[:, 0] + boxes[:, 2]) / 2
-    center_y = (boxes[:, 1] + boxes[:, 3]) / 2
-    return torch.cat([center_x, center_y, w, h], dim=-1)
+    wh = boxes[:, 2:] - boxes[:, :2]
+    center = (boxes[:, :2] + boxes[:, 2:]) / 2
+    return torch.cat([center, wh], dim=-1)
 
 
 def center_form_to_corner_form(locations):
     """Convert [center_x, center_y, w, h] to [xmin, ymin, xmax, ymax]"""
-    xmin = locations[:, 0] - locations[:, 2] / 2
-    xmax = locations[:, 0] + locations[:, 2] / 2
-    ymin = locations[:, 1] - locations[:, 3] / 2
-    ymax = locations[:, 1] + locations[:, 3] / 2
-    return torch.cat([xmin, ymin, xmax, ymax], dim=-1)
+    xymin = locations[:, :2] - locations[:, 2:] / 2
+    xymax = locations[:, :2] + locations[:, 2:] / 2
+    return torch.cat([xymin, xymax], dim=-1)
 
 
 def assign_priors(gt_boxes, gt_labels, corner_form_priors, iou_threshold):
@@ -75,3 +74,57 @@ def encode(center_form_target_boxes, center_form_priors, center_variance, size_v
     locations_wh = torch.log(center_form_target_boxes[:, 2:] / center_form_priors[:, 2:]) / size_variance
 
     return torch.cat([locations_centers, locations_wh], dim=-1)
+
+
+def decode():
+    pass
+
+
+@torch.no_grad()
+def hard_negative_mining(pred_confidences, gt_labels, negpos_ratio):
+    """
+
+    Args:
+        pred_confidences: Shape: (batch_size, num_priors, num_classes)
+        gt_locations:
+        gt_labels: Shape: (batch_size, num_priors)
+        negpos_ratio:
+
+    Returns:
+
+    """
+    # ------------------------------------------------------------------------------- #
+    # 将所有负例(对应的target_label为0，即背景类)按照loss排序
+    # ------------------------------------------------------------------------------- #
+    # 计算所有样本在target_label为0(背景类)上的loss
+    negative_loss = -F.log_softmax(pred_confidences, dim=-1)[:, :, 0] # (batch_size, num_priors)
+    # 根据target_label找出正例样本的mask -> 其余的即是负例样本的mask
+    positive_mask = gt_labels > 0 # (batch_size, num_priors)
+    # 为了方便后面对负例排序，这里将正样本在cls=0上的loss直接置为负无穷
+    negative_loss[positive_mask] = -math.inf
+    # 对负例loss（负例对应的类别是背景类，因此loss即是在target label=0这一维的loss）进行从大到小的排序
+    # 根据大小顺序索引得出background loss本身每个loss的排名. eg. 初始loss index: [0, 1, 2, 3, 4, 5], 假设有如下大小顺序:
+    # [3, 0, 1, 2, 4, 5], 在6个loss中idx=3对应的loss最大，id=5的对应loss最小，
+    _, negative_idx = negative_loss.sort(dim=1, descending=True) # (batch_size, num_priors)
+    # 再进行下一步，对大小顺序本身而不是对idx对应的loss进行排序，得到原来每个loss在整个顺序内的排名.
+    # eg.[3, 0, 1, 2, 4, 5] -> [0, 1, 2, 3, 4, 5], 对应的索引是[1, 2, 3, 0, 4, 5] 即表示在原loss中第0个loss在大小顺序中排名第1名，
+    # 在原loss中第3个位置的loss在大小顺序中排名第0名
+    _, negative_rank = negative_idx.sort(1) # (batch_size, num_priors)
+
+    # ------------------------------------------------------------------------------- #
+    # 按照negpos_ratio计算应该选取用于训练的负例数量
+    # ------------------------------------------------------------------------------- #
+    # 正例的数量
+    num_positive = positive_mask.long().sum(dim=1, keepdims=True) # (batch_size, 1)
+    # 负例的数量
+    num_priors = gt_labels.shape[1]
+    num_negative = torch.min(num_positive * negpos_ratio, num_priors - num_positive) # (batch_size, 1)
+
+    # ------------------------------------------------------------------------------- #
+    # 在negative loss中选取loss较大的num_negative用于计算损失函数
+    # ------------------------------------------------------------------------------- #
+    # 每张图片中选取num_negative个负例，选取的负例的位置用如下mask表示
+    real_negative_mask = negative_rank < num_negative
+
+    # 返回所有loss中正例和相应倍数的负例对应的mask
+    return positive_mask|real_negative_mask
