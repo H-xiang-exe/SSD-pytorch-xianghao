@@ -7,6 +7,7 @@ import torch
 from torch.utils.data import DataLoader
 import yaml
 
+from config import cfg
 from data.datasets import voc
 from modeling.ssd300_vgg16 import build_ssd
 from data.transforms import transforms
@@ -41,12 +42,13 @@ def do_train(model, train_dataloader, loss_fn,optimizer, scheduler, checkpointer
     end = time.time()
 
     # dataloader数据的批次
-    max_iter = len(train_dataloader)
-    logger.info(f"max_iter:{max_iter}")
+    data_iter = iter(train_dataloader)
     start_iter = 0
     model.train()
-    for iteration, (images, targets, _) in enumerate(train_dataloader, start_iter):
+#     for iteration, (images, targets, _) in enumerate(train_dataloader, start_iter):
+    for iteration in range(cfg.SOLVER.MAX_ITER):
         iteration = iteration + 1
+        images, targets, _ = next(data_iter)
         images = images.to(device)
         targets = targets.to(device)
 
@@ -68,7 +70,7 @@ def do_train(model, train_dataloader, loss_fn,optimizer, scheduler, checkpointer
         # 输出训练日志
         if iteration % args.log_step == 0:
             # 剩余训练时间
-            eta_seconds = meters.time.global_avg * (max_iter - iteration)
+            eta_seconds = meters.time.global_avg * (cfg.MAX_ITER - iteration)
             eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
             logger.info(
                 meters.delimeter.join([
@@ -80,7 +82,7 @@ def do_train(model, train_dataloader, loss_fn,optimizer, scheduler, checkpointer
                 ])
             )
         # 保存当前模型
-        if iteration % args.save_step == 0 and iteration != max_iter:
+        if iteration % args.save_step == 0 and iteration != cfg.MAX_ITER:
             checkpointer.save(f"model_{iteration:06d}")
         # 评估当前模型
         if iteration % args.eval_step == 0:
@@ -91,4 +93,4 @@ def do_train(model, train_dataloader, loss_fn,optimizer, scheduler, checkpointer
     # 计算训练时间
     total_training_time = int(time.time() - start_training_time)
     total_time_str = str(datetime.timedelta(seconds=total_training_time))
-    logger.info(f"Total training time: {total_time_str}({total_training_time / max_iter}s/it)")
+    logger.info(f"Total training time: {total_time_str}({total_training_time / cfg.MAX_ITER}s/it)")
