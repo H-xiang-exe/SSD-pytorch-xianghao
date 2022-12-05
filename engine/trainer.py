@@ -91,7 +91,7 @@ def do_train(model, train_dataloader, loss_fn,optimizer, scheduler, checkpointer
             checkpointer.save(f"model_{iteration:06d}")
         # 评估当前模型
         if iteration % args.eval_step == 0:
-            eval_results = eval.do_evaluation()
+            eval_results = eval.do_evaluation(model, iteration=iteration)
             model.train()
     checkpointer.save(f"model_final")
 
