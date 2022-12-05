@@ -57,6 +57,7 @@ class SSD300_VGG16(nn.Module):
         # ----------------------------------------------------------------------------------- #
         # 解码locations
         # ----------------------------------------------------------------------------------- #
+        self.prior_anchors = self.prior_anchors.to(torch.device('cuda'))
         bboxes = decode(loc_preds, self.prior_anchors, self.cfg.MODEL.CENTER_VARIANCE, self.cfg.MODEL.SIZE_VARIANCE)
 
         # 后处理

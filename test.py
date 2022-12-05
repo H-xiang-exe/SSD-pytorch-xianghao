@@ -29,7 +29,7 @@ def test(cfg, args):
     # -------------------------------------------------------------------------------------- #
     # 构建Dataloader
     # -------------------------------------------------------------------------------------- #
-    test_dataloader = make_data_loader(cfg, is_train=False)
+    test_dataloader = make_data_loader(cfg, is_train=False)[0]
 
     with torch.no_grad():
         model.eval()
@@ -40,11 +40,8 @@ def test(cfg, args):
             targets = targets.to(device)
 
             outputs = model(images)
-            print(outputs[0].shape, outputs.shape[1])
+            print(outputs[0].shape, outputs[1].shape)
             exit(0)
-
-
-
 
 
 if __name__ == '__main__':

@@ -95,6 +95,7 @@ def decode(locations, center_form_priors, center_variance, size_variance):
     boxes_xy = center_form_priors[..., 2:] * (center_variance * locations[..., :2]) + center_form_priors[..., :2]
     boxes_wh = center_form_priors[..., 2:] * torch.exp(size_variance * locations[..., 2:])
     boxes = torch.cat([boxes_xy, boxes_wh], dim=-1)
+    return boxes
 
 
 @torch.no_grad()
