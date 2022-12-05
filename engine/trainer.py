@@ -48,7 +48,12 @@ def do_train(model, train_dataloader, loss_fn,optimizer, scheduler, checkpointer
 #     for iteration, (images, targets, _) in enumerate(train_dataloader, start_iter):
     for iteration in range(cfg.SOLVER.MAX_ITER):
         iteration = iteration + 1
-        images, targets, _ = next(data_iter)
+        try:
+            images, targets, _ = next(data_iter)
+        except StopIteration as e:
+            data_iter = iter(train_dataloader)
+            images, targets, _ = next(data_iter)
+            
         images = images.to(device)
         targets = targets.to(device)
 
@@ -70,7 +75,7 @@ def do_train(model, train_dataloader, loss_fn,optimizer, scheduler, checkpointer
         # 输出训练日志
         if iteration % args.log_step == 0:
             # 剩余训练时间
-            eta_seconds = meters.time.global_avg * (cfg.MAX_ITER - iteration)
+            eta_seconds = meters.time.global_avg * (cfg.SOLVER.MAX_ITER - iteration)
             eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
             logger.info(
                 meters.delimeter.join([
@@ -82,7 +87,7 @@ def do_train(model, train_dataloader, loss_fn,optimizer, scheduler, checkpointer
                 ])
             )
         # 保存当前模型
-        if iteration % args.save_step == 0 and iteration != cfg.MAX_ITER:
+        if iteration % args.save_step == 0 and iteration != cfg.SOLVER.MAX_ITER:
             checkpointer.save(f"model_{iteration:06d}")
         # 评估当前模型
         if iteration % args.eval_step == 0:
@@ -93,4 +98,4 @@ def do_train(model, train_dataloader, loss_fn,optimizer, scheduler, checkpointer
     # 计算训练时间
     total_training_time = int(time.time() - start_training_time)
     total_time_str = str(datetime.timedelta(seconds=total_training_time))
-    logger.info(f"Total training time: {total_time_str}({total_training_time / cfg.MAX_ITER}s/it)")
+    logger.info(f"Total training time: {total_time_str}({total_training_time / cfg.SOLVER.MAX_ITER}s/it)")
