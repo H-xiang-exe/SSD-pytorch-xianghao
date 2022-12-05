@@ -46,12 +46,8 @@ class SSDTargetTransform(object):
         # match priors with gt boxes 根据gt boxes和prior boxes的iou将两者匹配，选出所有priors需要匹配的gt boxes及其类别标签
         target_boxes, target_labels = box_utils.assign_priors(gt_boxes, gt_labels, self.corner_form_priors,
                                                               self.iou_thread)
-        # print('------------------target boxes------------------')
-        # print(target_boxes)
+
         target_boxes = box_utils.corner_form_to_center_form(target_boxes)
-        # print('------------------target boxes------------------')
-        # print(target_boxes)
-        # print("============================================")
         target_locations = box_utils.encode(target_boxes, self.center_form_priors, self.center_variance,
                                             self.size_variance)
 

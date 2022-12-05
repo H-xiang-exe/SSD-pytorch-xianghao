@@ -4,14 +4,15 @@ import torch.nn.functional as F
 
 from layers.l2norm import L2Norm
 from utils.prior_anchor import PriorAnchor
-
+from utils.box_utils import decode
+from .post_processor import PostProcessor
 
 class SSD300_VGG16(nn.Module):
     """Single Shot Multibox Architecture
     The network is composed of a base VGG network followed by the added multibox conv layers.Each multibox layer branchs into:
     """
 
-    def __init__(self, phase, size, base, extras, head, num_classes, config=None):
+    def __init__(self, phase, size, base, extras, head, num_classes, cfg):
         """
         Args:
             phase(string): "test" or "train"
@@ -23,7 +24,7 @@ class SSD300_VGG16(nn.Module):
         super(SSD300_VGG16, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
-        # self.cfg = config
+        self.cfg = cfg
 
         # SSD network
         self.vgg = nn.ModuleList(base)
@@ -31,10 +32,39 @@ class SSD300_VGG16(nn.Module):
         self.location = nn.ModuleList(head[0])
         self.confidence = nn.ModuleList(head[1])
         self.prior_anchors = PriorAnchor((size, size))()
+        self.post_processor= PostProcessor(cfg)
 
         self.L2Norm = L2Norm(512, 20)
 
     def forward(self, x):
+        if self.training:
+            return self._forward_train(x)
+        else:
+            return self._forward_test(x)
+
+    def _forward_train(self, x):
+        loc_preds, conf_preds = self._predict(x)
+        return loc_preds, conf_preds, self.prior_anchors
+
+    def _forward_test(self, x):
+        loc_preds, conf_preds = self._predict(x)
+        # ----------------------------------------------------------------------------------- #
+        # 以下两部可在模型外部处理，也可在内部处理，这里暂时放在外部，此处仅作注释
+        # ----------------------------------------------------------------------------------- #
+
+        # 置信度
+        scores = F.softmax(conf_preds, dim=2)
+        # ----------------------------------------------------------------------------------- #
+        # 解码locations
+        # ----------------------------------------------------------------------------------- #
+        bboxes = decode(loc_preds, self.prior_anchors, self.cfg.MODEL.CENTER_VARIANCE, self.cfg.MODEL.SIZE_VARIANCE)
+
+        # 后处理
+        detections = (scores, bboxes)
+        # detections = self.post_processor(detections)
+        return detections
+
+    def _predict(self, x):
         sources = []
         for layer_idx in range(23):
             x = self.vgg[layer_idx](x)
@@ -65,11 +95,11 @@ class SSD300_VGG16(nn.Module):
         conf = torch.cat([o.view(o.size(0), -1) for o in conf], dim=1)
 
         # (N, h1*w1*num_anchor1 + h2*w2*num_anchor2 + h3*w3*num_anchor3, 4)
-        loc.view(loc.size()[0], -1, 4)
+        loc.view(loc.shape[0], -1, 4)
         # print(conf.size()[0], self.num_classes)
-        conf.view(conf.size()[0], -1, self.num_classes)
+        conf.view(conf.shape[0], -1, self.num_classes)
 
-        output = (loc.view(loc.size()[0], -1, 4), conf.view(conf.size()[0], -1, self.num_classes), self.prior_anchors)
+        output = (loc.view(loc.size()[0], -1, 4), conf.view(conf.size()[0], -1, self.num_classes))
 
         return output
 
@@ -141,7 +171,7 @@ def detection_head(vgg, extra_layers):
     return location_layer, confidence_layer
 
 
-def build_ssd(phase, dataset_config=None, size=300, num_classes=21):
+def build_ssd(phase, cfg, size=300, num_classes=21, ):
     '''
     Args:
         phase: 'train' or 'test'
@@ -154,4 +184,4 @@ def build_ssd(phase, dataset_config=None, size=300, num_classes=21):
     base_ = vgg()
     extras_ = add_extras()
     head_ = detection_head(base_, extras_)
-    return SSD300_VGG16(phase, size, base_, extras_, head_, num_classes)
+    return SSD300_VGG16(phase, size, base_, extras_, head_, num_classes, cfg)

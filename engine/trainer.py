@@ -4,19 +4,10 @@ import time
 import datetime
 
 import torch
-from torch.utils.data import DataLoader
-import yaml
 
 from config import cfg
-from data.datasets import voc
-from modeling.ssd300_vgg16 import build_ssd
-from data.transforms import transforms
 from utils.metric_logger import MetricLogger
-from utils.checkpoint import CheckPointer
 from engine import eval
-from solver.multibox_loss import MultiBoxLoss
-from data import transforms
-
 
 def do_train(model, train_dataloader, loss_fn,optimizer, scheduler, checkpointer, device, args):
     """
