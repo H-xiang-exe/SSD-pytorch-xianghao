@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from layers.l2norm import L2Norm
 from utils.prior_anchor import PriorAnchor
-from utils.box_utils import decode
+from utils import box_utils
 from .post_processor import PostProcessor
 
 class SSD300_VGG16(nn.Module):
@@ -58,11 +58,13 @@ class SSD300_VGG16(nn.Module):
         # 解码locations
         # ----------------------------------------------------------------------------------- #
         self.prior_anchors = self.prior_anchors.to(torch.device('cuda'))
-        bboxes = decode(loc_preds, self.prior_anchors, self.cfg.MODEL.CENTER_VARIANCE, self.cfg.MODEL.SIZE_VARIANCE)
-
+        bboxes = box_utils.decode(loc_preds, self.prior_anchors, self.cfg.MODEL.CENTER_VARIANCE, self.cfg.MODEL.SIZE_VARIANCE)
+        # 转换为corner form 
+        bboxes = box_utils.center_form_to_corner_form(bboxes)
+        
         # 后处理
         detections = (scores, bboxes)
-        # detections = self.post_processor(detections)
+        detections = self.post_processor(detections)
         return detections
 
     def _predict(self, x):

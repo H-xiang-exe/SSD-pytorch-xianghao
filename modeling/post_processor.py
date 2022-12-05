@@ -1,7 +1,15 @@
+import torch
+from torchvision.ops import nms
+
+from utils.nms import batched_nms
+from structures.container import Container
+
 class PostProcessor(object):
     def __init__(self, cfg):
         super(PostProcessor, self).__init__()
         self.cfg = cfg
+        self.width = cfg.INPUT_IMAGE_SIZE
+        self.height = cfg.INPUT_IMAGE_SIZE
 
     def __call__(self, detections):
         # 模型输出
@@ -11,8 +19,44 @@ class PostProcessor(object):
 
         results = []
         for scores, boxes in zip(batch_scores, batch_boxes):
-            num_boxes = scores.shape[0]  # scores: (num_boxes, 4)
-            num_classes = boxes.shape[0]  # boxes: (num_boxes, cls)
+            num_boxes = scores.shape[0]   # boxes: (num_boxes, 4)
+            num_classes = boxes.shape[1]  # scores: (num_boxes, cls)
 
-            boxes = boxes.view(num_boxes, 1, 4).expand(num_boxes, num_classes, 4)
-            print(boxes)
+            # (num_boxes, 4) -> (num_boxes, 21, 4) 复制了21份
+            boxes = boxes.view(num_boxes, 1, 4).expand(
+                num_boxes, num_classes, 4)
+            # [0, 1, 2, ..., 21]
+            labels = torch.arange(num_classes, device=device)
+            labels.view(1, num_classes).expand_as(scores)  # (num_boxes, cls)
+
+            # ------------------------------------------------------------------ #
+            # 移除为背景类的数据
+            # ------------------------------------------------------------------ #            
+            # 去掉分类为0的那一份，每个盒子的位置还有20份
+            boxes = boxes[:, 1:]  # (num_boxes, 20, 4)
+            scores = scores[:, 1:] # (num_boxes, 20)
+            labels = labels[:, 1:] # (num_boxes, 20)
+            
+            # 让每个box每一类都成为一条单独的数据
+            boxes = boxes.reshape(-1, 4)# (num_boxes*20, 4)
+            scores = boxes.reshape(-1)
+            labels = labels.reshape(-1)
+            
+            # 获得置信度大于某个阈值的数据实例的索引
+            indices = torch.nonzero(scores > self.cfg.TEST.CONFIDENCE_THRESHOLD)
+            boxes, scores, labels = boxes[indices], scores[indices], labels[indices]
+            
+            boxes[:, ::2] *= self.width
+            boxes[:, 1::2] *= self.height
+            
+            # 通过nms过滤
+            keep = batched_nms(boxes, scores, labels, self.cfg.TEST.NMS_THRESHOLD)
+            boxes = boxes[keep], scores[keep], labels[keep]
+            
+            container = Container(boxes=boxes, labels=labels, scores=scores)
+            container.img_width = self.width
+            container.img_height = self.height
+            results.append(container)
+        return results
+            
+            
