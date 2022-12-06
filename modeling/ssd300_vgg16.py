@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from layers.l2norm import L2Norm
 from utils.prior_anchor import PriorAnchor
 from utils import box_utils
-from .post_processor import PostProcessor
+from modeling.boxhead.post_processor import PostProcessor
 
 class SSD300_VGG16(nn.Module):
     """Single Shot Multibox Architecture
@@ -36,45 +36,7 @@ class SSD300_VGG16(nn.Module):
 
         self.L2Norm = L2Norm(512, 20)
 
-    def forward(self, x):
-        """_summary_
 
-        Args:
-            x (_type_): _description_
-
-        Returns:
-            tuple: loc_preds, conf_preds, priors
-            container(test): Container(boxes, scores, labels)
-        """
-        if self.training:
-            return self._forward_train(x)
-        else:
-            return self._forward_test(x)
-
-    def _forward_train(self, x):
-        loc_preds, conf_preds = self._predict(x)
-        return loc_preds, conf_preds, self.prior_anchors
-
-    def _forward_test(self, x):
-        loc_preds, conf_preds = self._predict(x)
-        # ----------------------------------------------------------------------------------- #
-        # 以下两部可在模型外部处理，也可在内部处理，这里暂时放在外部，此处仅作注释
-        # ----------------------------------------------------------------------------------- #
-
-        # 置信度
-        scores = F.softmax(conf_preds, dim=2)
-        # ----------------------------------------------------------------------------------- #
-        # 解码locations
-        # ----------------------------------------------------------------------------------- #
-        self.prior_anchors = self.prior_anchors.to(torch.device('cuda'))
-        bboxes = box_utils.decode(loc_preds, self.prior_anchors, self.cfg.MODEL.CENTER_VARIANCE, self.cfg.MODEL.SIZE_VARIANCE)
-        # 转换为corner form 
-        bboxes = box_utils.center_form_to_corner_form(bboxes)
-        
-        # 后处理
-        detections = (scores, bboxes)
-        detections = self.post_processor(detections) # container(boxes, scores, labels)
-        return detections
 
     def _predict(self, x):
         sources = []
@@ -115,55 +77,6 @@ class SSD300_VGG16(nn.Module):
 
         return output
 
-
-def vgg(batch_norm: bool = False):
-    # vgg16 config
-    layer_cfg = [64, 64, 'M',  # (300, 300, 64), (300, 300, 64), (150, 150, 64)
-                 128, 128, 'M',  # (150, 150, 128), (150, 150, 128), (75, 75, 128)
-                 256, 256, 256, 'C',  # (75, 75, 256), (75, 75, 256), (75, 75, 256), (38, 38, 256)
-                 512, 512, 512, 'M',  # (38, 38, 512), (38, 38, 512), (38, 38, 512), (19, 19, 512)
-                 512, 512, 512]  # (19, 19, 512), (19, 19, 512), (19, 19, 512)
-
-    layers = []
-    in_channels = 3
-    for v in layer_cfg:
-        if v == 'M':
-            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
-        elif v == 'C':
-            layers += [nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)]
-        else:
-            conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
-            if batch_norm:
-                layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
-            else:
-                layers += [conv2d, nn.ReLU(inplace=True)]
-            in_channels = v
-    pool5 = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)  # (19, 19, 512) -> (19, 19, 512)
-    conv6 = nn.Conv2d(512, 1024, kernel_size=3, padding=6, dilation=6)  # (19, 19, 512) -> (19, 19, 1024)
-    conv7 = nn.Conv2d(1024, 1024, kernel_size=1)  # (19, 19, 1024) -> (19, 19, 1024)
-    layers += [pool5, conv6, nn.ReLU(inplace=True), conv7, nn.ReLU(inplace=True)]
-    return nn.ModuleList(layers)
-
-
-def add_extras():
-    layers = []
-    # 'S'标志着下一个卷积stride=2
-    extra_cfg = [256, 'S', 512,  # (19, 19, 1024) -> (19, 19, 256) -> (10, 10, 512)
-                 128, 'S', 256,  # (10, 10, 512) -> (10, 10, 128) -> (5, 5, 256)
-                 128, 256,  # (5, 5, 256) -> (5, 5, 128) -> (3, 3, 256)
-                 128, 256]  # (3, 3, 256) -> (3, 3, 128) -> (1, 1, 256)
-
-    flag = False
-    in_channels = 1024
-    for idx, v in enumerate(extra_cfg):
-        if in_channels != 'S':
-            if v == 'S':
-                layers += [nn.Conv2d(in_channels, extra_cfg[idx + 1], kernel_size=(1, 3)[flag], stride=2, padding=1)]
-            else:
-                layers += [nn.Conv2d(in_channels, v, kernel_size=(1, 3)[flag])]
-            flag = not flag
-        in_channels = v
-    return nn.ModuleList(layers)
 
 
 def detection_head(vgg, extra_layers):
