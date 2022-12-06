@@ -1,4 +1,5 @@
 import logging
+from engine.eval import do_evaluation
 
 import torch.backends.cudnn
 from torch.utils.data import DataLoader
@@ -26,22 +27,24 @@ def test(cfg, args):
     model = build_model(cfg)
     model.to(device)
 
-    # -------------------------------------------------------------------------------------- #
-    # 构建Dataloader
-    # -------------------------------------------------------------------------------------- #
-    test_dataloader = make_data_loader(cfg, is_train=False)[0]
+    # # -------------------------------------------------------------------------------------- #
+    # # 构建Dataloader
+    # # -------------------------------------------------------------------------------------- #
+    # test_dataloader = make_data_loader(cfg, is_train=False)[0]
 
-    with torch.no_grad():
-        model.eval()
-        # dataloader数据的批次
-        #     for iteration, (images, targets, _) in enumerate(train_dataloader, start_iter):
-        for batch_idx, (images, targets, image_ids) in enumerate(test_dataloader):
-            images = images.to(device)
-            targets = targets.to(device)
+    # with torch.no_grad():
+    #     model.eval()
+    #     # dataloader数据的批次
+    #     #     for iteration, (images, targets, _) in enumerate(train_dataloader, start_iter):
+    #     for batch_idx, (images, targets, image_ids) in enumerate(test_dataloader):
+    #         images = images.to(device)
+    #         targets = targets.to(device)
 
-            outputs = model(images)
-            exit(0)
+    #         outputs = model(images)
 
+            
+    #         exit()
+    do_evaluation(cfg, model, iteration=0)
 
 if __name__ == '__main__':
     # -------------------------------------------------------------------------------------- #

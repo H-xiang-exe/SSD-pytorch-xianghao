@@ -37,6 +37,15 @@ class SSD300_VGG16(nn.Module):
         self.L2Norm = L2Norm(512, 20)
 
     def forward(self, x):
+        """_summary_
+
+        Args:
+            x (_type_): _description_
+
+        Returns:
+            tuple: loc_preds, conf_preds, priors
+            container(test): Container(boxes, scores, labels)
+        """
         if self.training:
             return self._forward_train(x)
         else:
@@ -64,7 +73,7 @@ class SSD300_VGG16(nn.Module):
         
         # 后处理
         detections = (scores, bboxes)
-        detections = self.post_processor(detections)
+        detections = self.post_processor(detections) # container(boxes, scores, labels)
         return detections
 
     def _predict(self, x):
