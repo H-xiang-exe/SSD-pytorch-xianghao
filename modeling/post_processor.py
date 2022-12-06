@@ -62,7 +62,7 @@ class PostProcessor(object):
             
             # 通过nms过滤
             keep = batched_nms(boxes, scores, labels, self.cfg.TEST.NMS_THRESHOLD)
-            boxes = boxes[keep], scores[keep], labels[keep]
+            boxes, scores, labels = boxes[keep], scores[keep], labels[keep]
             
             container = Container(boxes=boxes, labels=labels, scores=scores)
             container.img_width = self.width
