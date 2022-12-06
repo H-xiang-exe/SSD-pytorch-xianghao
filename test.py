@@ -40,7 +40,6 @@ def test(cfg, args):
             targets = targets.to(device)
 
             outputs = model(images)
-            print(outputs[0].shape, outputs[1].shape)
             exit(0)
 
 

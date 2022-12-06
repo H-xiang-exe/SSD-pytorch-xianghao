@@ -10,15 +10,15 @@ def corner_form_to_center_form(boxes):
     Args:
         boxes(torch.Tensor)
     """
-    wh = boxes[:, 2:] - boxes[:, :2]
-    center = (boxes[:, :2] + boxes[:, 2:]) / 2
+    wh = boxes[..., 2:] - boxes[..., :2]
+    center = (boxes[..., :2] + boxes[..., 2:]) / 2
     return torch.cat([center, wh], dim=-1)
 
 
 def center_form_to_corner_form(locations):
     """Convert [center_x, center_y, w, h] to [xmin, ymin, xmax, ymax]"""
-    xymin = locations[:, :2] - locations[:, 2:] / 2
-    xymax = locations[:, :2] + locations[:, 2:] / 2
+    xymin = locations[..., :2] - locations[..., 2:] / 2
+    xymax = locations[..., :2] + locations[..., 2:] / 2
     return torch.cat([xymin, xymax], dim=-1)
 
 
