@@ -100,26 +100,6 @@ class VOCDataset(torch.utils.data.Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
 
-    def pull_item(self, idx):
-        img_id = self.img_list[idx]
-        target = ET.parse(self.annotation_path % img_id).getroot()
-        img = cv2.imread(self.img_path % img_id)  # (height, Width, 'BGR')
-        assert img is not None, 'image is not found.'
-        height, width, channels = img.shape
-
-        if self.target_transform is not None:
-            target = self.target_transform(target, self.classes_names, width,
-                                           height)  # [[xmin, ymin, xmax, ymax, label], ...]
-
-        if self.transform is not None:
-            target = np.array(target)
-            img, boxes, labels = self.transform(img, target[:, :4], target[:, 4])  # 对图片进行数据增强同时改变其对应的box坐标和label值
-            # 图片由opencv读取，现在通道顺序是：BGR，现在需要转换成RGB
-            # boxes: (num_box, 4), labels: (num_box) --> labels: (num_box, 1) --> cat(boxes, labels): (num_box, 5)
-            target = np.hstack([boxes, np.expand_dims(labels, axis=1)])
-            target = torch.from_numpy(target)
-        return img, target, height, width  # 输出图片仍然是BGR
-
     def pull_image(self, idx):
         """根据idx获得数据集中的原图(不经过transform)，形式为PIL
         这里不直接使用pull_item()的原因是不希望经过tranform
