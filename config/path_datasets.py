@@ -27,7 +27,7 @@ class DatasetPath(object):
 
     @staticmethod
     def get_name(name):
-        if 'voc_evaluation' in name:
+        if 'voc' in name:
             voc_root = DatasetPath.DATA_DIR
             if 'VOC_ROOT' in os.environ:
                 voc_root = os.environ['VOC_ROOT']
@@ -38,6 +38,6 @@ class DatasetPath(object):
             )
             return dict(factory='VOCDataset', args=args)
 
-        elif 'coco_evaluation' in name:
+        elif 'coco' in name:
             pass
         raise RuntimeError(f"Datasets not availabel: {name}")

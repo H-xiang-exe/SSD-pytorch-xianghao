@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from .post_processor import PostProcessor
 from .box_predictor import make_box_predictor
 from utils import box_utils
+from utils.prior_anchor import PriorAnchor
 
 class SSDBoxHead(nn.Module):
 
@@ -13,7 +14,7 @@ class SSDBoxHead(nn.Module):
         self.cfg = cfg
         self.predictor = make_box_predictor(cfg)
         self.post_processor = PostProcessor(cfg)
-
+        self.prior_anchors = PriorAnchor((300, 300))
     def forward(self, features):
         """
 
