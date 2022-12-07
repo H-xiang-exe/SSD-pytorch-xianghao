@@ -6,13 +6,13 @@ class DatasetPath(object):
     DATA_DIR = "datasets"
     DATASETS = {
         "voc_2007_train": {
-            #"data_dir": "/root/autodl-tmp/data/VOCdevkit/VOC2007",
-            "data_dir": "D:\Works\SSD-pytorch-xianghao/batchdata\VOCdevkit\VOC2007",
+            "data_dir": "/root/autodl-tmp/data/VOCdevkit/VOC2007",
+#             "data_dir": "D:\Works\SSD-pytorch-xianghao/batchdata\VOCdevkit\VOC2007",
             "split": "train"
         },
         "voc_2007_trainval": {
-            # "data_dir": "/root/autodl-tmp/data/VOCdevkit/VOC2007",
-            "data_dir": "D:\Works\SSD-pytorch-xianghao/batchdata\VOCdevkit\VOC2007",
+            "data_dir": "/root/autodl-tmp/data/VOCdevkit/VOC2007",
+#             "data_dir": "D:\Works\SSD-pytorch-xianghao/batchdata\VOCdevkit\VOC2007",
             "split": "trainval"
         },
         "voc_2007_test": {
