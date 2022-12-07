@@ -27,8 +27,10 @@ def test(cfg, args):
     model = build_model(cfg)
     model.to(device)
 
-    ckp = torch.load('./checkpoints/model_final.pth', map_location=torch.device('cpu'))
-    model.load_state_dict(ckp['model'])
+    print(model)
+
+    # ckp = torch.load('./checkpoints/model_final.pth', map_location=torch.device('cpu'))
+    # model.load_state_dict(ckp['model'])
     # # -------------------------------------------------------------------------------------- #
     # # 构建Dataloader
     # # -------------------------------------------------------------------------------------- #
@@ -46,7 +48,7 @@ def test(cfg, args):
 
             
     #         exit()
-    do_evaluation(cfg, model, iteration=0)
+    # do_evaluation(cfg, model, iteration=0)
 
 if __name__ == '__main__':
     # -------------------------------------------------------------------------------------- #

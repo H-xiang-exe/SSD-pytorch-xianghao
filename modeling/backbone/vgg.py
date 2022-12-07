@@ -81,6 +81,7 @@ class VGG(nn.Module):
         self.extras = add_extras()
 
         self.l2norm = L2Norm(n_channels=512, scale=20)
+        self.reset_parameters()
 
     def forward(self, x):
         sources = []
@@ -104,6 +105,19 @@ class VGG(nn.Module):
 
     def initialize_weights_from_pretrain(self, state_dict):
         self.vgg_base.load_state_dict(state_dict, strict=False)
+
+    def reset_parameters(self):
+        for m in self.extras.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.constant_(m.bias, 0)
 
 
 def vgg(cfg=None, pretrained=True):
