@@ -1,6 +1,6 @@
 import torch
 from data.build import make_data_loader
-from data.datasets.evaluation import evaluate
+
 
 @torch.no_grad()
 def inference(model, data_loader, device):
