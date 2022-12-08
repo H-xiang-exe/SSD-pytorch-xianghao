@@ -26,6 +26,12 @@ def train(cfg, args):
     # -------------------------------------------------------------------------------------- #
     model = build_model(cfg)
     model.to(device)
+    
+    # inputs = torch.randn(1, 3, 300, 300).to(torch.device('cuda'))
+    # net_ = torch.jit.trace(model, inputs)
+    # # torch.save(net_, "res.pth")
+    # net_.save('res.pth')
+    
 
     # -------------------------------------------------------------------------------------- #
     # 建立优化器

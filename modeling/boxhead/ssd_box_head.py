@@ -14,7 +14,7 @@ class SSDBoxHead(nn.Module):
         self.cfg = cfg
         self.predictor = make_box_predictor(cfg)
         self.post_processor = PostProcessor(cfg)
-        self.prior_anchors = PriorAnchor((300, 300))
+        self.prior_anchors = PriorAnchor((300, 300))()
     def forward(self, features):
         """
 
@@ -32,7 +32,7 @@ class SSDBoxHead(nn.Module):
             return self._forward_test(locations_pred, confidences_pred)
 
     def _forward_train(self, locations_pred, confidences_pred):
-        return locations_pred, confidences_pred, self.prior_anchors
+        return locations_pred, confidences_pred, self.prior_anchors.to('cuda')
 
     def _forward_test(self, location_preds, confidence_preds):
         # ----------------------------------------------------------------------------------- #

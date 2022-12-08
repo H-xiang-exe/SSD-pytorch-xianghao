@@ -10,7 +10,7 @@ parser = argparse.ArgumentParser(
 
 # Data
 data_arg = parser.add_argument_group('Data')
-data_arg.add_argument('--config_file', default="configs/voc07.yaml", metavar="FILE", help="path to config file",
+data_arg.add_argument('--config_file', default="configs/voc0712.yaml", metavar="FILE", help="path to config file",
                       type=str)
 
 # solver

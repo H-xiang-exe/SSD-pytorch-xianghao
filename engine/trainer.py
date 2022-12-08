@@ -59,6 +59,12 @@ def do_train(model, train_dataloader, loss_fn,optimizer, scheduler, checkpointer
         optimizer.step()
         scheduler.step()
 
+        # for name,params in model.named_parameters():
+        #     print(f'-->name: {name}')
+        #     # print(f'-->param: {params}')
+        #     print(f'-->grad:{params.grad}')
+            
+        
         batch_time = time.time() - end
         end = time.time()
         meters.update(time=batch_time)

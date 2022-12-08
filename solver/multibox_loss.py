@@ -41,22 +41,22 @@ class MultiBoxLoss(nn.Module):
         Returns:
 
         """
-        pred_locations, pred_confidences, priors = predictions
+        pred_locations, pred_confidences, priors = predictions # ()
         num_classes = pred_confidences.shape[2]
         # 获得标签
-        target_locations_positive, target_labels = targets['boxes'], targets['labels']
+        target_locations, target_labels = targets['boxes'], targets['labels'] # (16, 8732, 4), (16, 8732)
         # 获得样本中的所有正例的mask
-        positive_mask = target_labels > 0
+        positive_mask = target_labels > 0 # (16, 8732)
 
         # ------------------------------------------------------------------------------- #
         # Hard negative mining
         # ------------------------------------------------------------------------------- #
         # 从正例之外再选取一部分负例共同组成训练样本，返回相应的mask
-        mask = box_utils.hard_negative_mining(pred_confidences, target_labels, self.negpos_ratio)
+        mask = box_utils.hard_negative_mining(pred_confidences, target_labels, self.negpos_ratio) # (16, 8732)
 
         # 计算所有正例的回归loss
-        pred_locations_positive = pred_locations[positive_mask, :].view(-1, 4)
-        target_locations_positive = target_locations_positive[positive_mask, :].view(-1, 4)
+        pred_locations_positive = pred_locations[positive_mask, :].view(-1, 4) 
+        target_locations_positive = target_locations[positive_mask, :].view(-1, 4)
         reg_loss = F.smooth_l1_loss(pred_locations_positive, target_locations_positive, reduction='sum')
 
         # 计算正例+部分负例的分类loss
