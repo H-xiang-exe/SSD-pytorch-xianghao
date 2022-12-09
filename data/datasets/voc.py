@@ -15,12 +15,12 @@ class VOCDataset(torch.utils.data.Dataset):
                    'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train',
                    'tvmonitor']
 
-    def __init__(self, data_dir, split, transform=None, target_transform=None):
+    def __init__(self, data_dir, split, transform=None, target_transform=None， keep_difficult=False):
         """Handle the VOC annotation
         Args:
-            root_path(str): root path of this project
             data_dir(str): file path to VOC2007 or VOC2012
-            image_dataset(str): eg. 'train', 'test', 'trainval'
+            split(str): eg. 'train', 'test', 'trainval'
+            keep_difficult(bool): whether to remain difficult boxes
         """
         super(VOCDataset, self).__init__()
         self.data_dir = data_dir
@@ -28,6 +28,8 @@ class VOCDataset(torch.utils.data.Dataset):
 
         self.transform = transform
         self.target_transform = target_transform
+        
+        self.keep_difficult = keep_difficult
 
         # -------------------------------------------------------------------------------------------------- #
         # 获得数据集图片名列表
@@ -45,6 +47,9 @@ class VOCDataset(torch.utils.data.Dataset):
         image_id = self.image_ids[idx]
         # 读取annotation，得到每张图片的坐标位置，类别，以及检测难易程度
         boxes, labels, is_difficult = self._get_annotation(image_id)
+        if not self.keep_difficult:
+            boxes = boxes[is_difficult == 0]
+            labels = labels[is_difficult == 0]
 
         # 读取图片
         image = self._get_image(image_id)
