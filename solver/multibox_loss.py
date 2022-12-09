@@ -41,7 +41,7 @@ class MultiBoxLoss(nn.Module):
         Returns:
 
         """
-        pred_locations, pred_confidences, priors = predictions  # ()
+        pred_locations, pred_confidences = predictions  # ()
         num_classes = pred_confidences.shape[2]
         # 获得标签
         target_locations, target_labels = targets['boxes'], targets['labels']  # (16, 8732, 4), (16, 8732)

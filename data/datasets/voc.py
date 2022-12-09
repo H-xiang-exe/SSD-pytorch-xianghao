@@ -15,7 +15,7 @@ class VOCDataset(torch.utils.data.Dataset):
                    'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train',
                    'tvmonitor']
 
-    def __init__(self, data_dir, split, transform=None, target_transform=None， keep_difficult=False):
+    def __init__(self, data_dir, split, transform=None, target_transform=None, keep_difficult=False):
         """Handle the VOC annotation
         Args:
             data_dir(str): file path to VOC2007 or VOC2012
@@ -28,7 +28,7 @@ class VOCDataset(torch.utils.data.Dataset):
 
         self.transform = transform
         self.target_transform = target_transform
-        
+
         self.keep_difficult = keep_difficult
 
         # -------------------------------------------------------------------------------------------------- #

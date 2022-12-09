@@ -28,6 +28,6 @@ def build_transform(is_train=True):
 
 
 def build_target_transform(cfg):
-    center_form_priors = PriorAnchor((300, 300))()
+    center_form_priors = PriorAnchor(cfg)()
     return SSDTargetTransform(center_form_priors, cfg.MODEL.CENTER_VARIANCE, cfg.MODEL.SIZE_VARIANCE,
                               cfg.MODEL.THRESHOLD)
