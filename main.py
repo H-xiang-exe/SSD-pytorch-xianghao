@@ -10,6 +10,8 @@ from utils.checkpoint import CheckPointer
 from data.build import make_data_loader
 from engine.trainer import do_train
 from solver.multibox_loss import MultiBoxLoss
+
+
 def train(cfg, args):
     # -------------------------------------------------------------------------------------- #
     # 建立logger
@@ -26,12 +28,11 @@ def train(cfg, args):
     # -------------------------------------------------------------------------------------- #
     model = build_model(cfg)
     model.to(device)
-    
+    #
     # inputs = torch.randn(1, 3, 300, 300).to(torch.device('cuda'))
     # net_ = torch.jit.trace(model, inputs)
     # # torch.save(net_, "res.pth")
     # net_.save('res.pth')
-    
 
     # -------------------------------------------------------------------------------------- #
     # 建立优化器
@@ -54,9 +55,8 @@ def train(cfg, args):
     # -------------------------------------------------------------------------------------- #
     training_dataloader = make_data_loader(cfg)
     data_iter = iter(training_dataloader)
-    images, targets, ids = next(data_iter)
+    # images, targets, ids = next(data_iter)
     # print(targets['boxes'])
-
 
     # -------------------------------------------------------------------------------------- #
     # 构建loss function
@@ -65,7 +65,6 @@ def train(cfg, args):
 
     model = do_train(model, training_dataloader, loss_fn, optimizer, scheduler, checkpointer, device, args)
     return model
-
 
 
 if __name__ == '__main__':

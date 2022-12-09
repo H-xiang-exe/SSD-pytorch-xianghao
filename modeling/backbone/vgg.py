@@ -89,7 +89,7 @@ class VGG(nn.Module):
             x = self.vgg_base[layer_idx](x)
         # 至此得到第22层（conv4_3+relu）的输出
         s = self.l2norm(x)
-        sources.append(x)  # conv4_3 feature
+        sources.append(s)  # conv4_3 feature
 
         for layer_idx in range(23, len(self.vgg_base)):
             x = self.vgg_base[layer_idx](x)

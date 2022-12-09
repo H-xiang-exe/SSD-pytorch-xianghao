@@ -92,11 +92,11 @@ class VOCDataset(torch.utils.data.Dataset):
             is_difficult.append(difficult)
 
         return np.array(boxes, dtype=np.float32), np.array(labels, dtype=np.int64), np.array(is_difficult,
-                                                                              dtype=np.uint8)
+                                                                                             dtype=np.uint8)
 
     def _get_image(self, image_id):
         image_file = os.path.join(self.data_dir, "JPEGImages", f"{image_id}.jpg")
-        image = cv2.imread(image_file)
+        image = cv2.imread(image_file)  # Shape: (H, W, 3)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
 
