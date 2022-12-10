@@ -116,16 +116,24 @@ class VOCDataset(torch.utils.data.Dataset):
         image_id = self.img_list[idx]
         return cv2.imread(self.img_path % image_id, cv2.IMREAD_COLOR)  # 这里以openCV读取，并非PIL
 
-    def pull_anno(self, idx):
-        """根据idx获得图片对应的annotation
+    def get_anno(self, idx):
+        image_id = self.image_ids[idx]
+        annotation = self._get_annotation(image_id)
+        return image_id, annotation
+
+    def get_image_info(self, idx):
+        """Obtains the height and width of the image.
+
         Args:
-            idx(int): index of image
-        Return:
-            list: [img_id, [(label, bbox coords), ...]
-            eg. ('001718', [('dog', (96, 13, 438, 332)), ...]
+            idx:
+
+        Returns:
+
         """
-        img_id = self.img_list[idx]
-        anno = ET.parse(self.annotation_path % img_id).getroot()
-        # 获得box坐标（不做归一化）
-        gt = self.target_transform(anno, self.classes, 1, 1)  # ([xmin, ymin, xmax, ymax, cls], ...)
-        return img_id, gt
+        image_id = self.image_ids[idx]
+        annotation_file = os.path.join(self.data_dir, "Annotations", f"{image_id}.xml")
+        anno = ET.parse(annotation_file).getroot()
+        size = anno.find("size")
+        img_info = tuple(map(int, (size.find("height").text, size.find("width").text)))
+        return img_info[0], img_info[1]
+        # return {"height": img_info[0], "width": img_info[1]}

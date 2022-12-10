@@ -19,7 +19,7 @@ def build_dataset(dataset_list, transform=None, target_transform=None, is_train=
         # 获得数据集信息
         data = DatasetPath.get_name(dataset_name)
         # 获得数据集所在目录及split
-        args = data['args'] # VOCDataset: data_dir, split
+        args = data['args']  # VOCDataset: data_dir, split
         # 增加transformer参数
         args['transform'] = transform
         args['target_transform'] = target_transform

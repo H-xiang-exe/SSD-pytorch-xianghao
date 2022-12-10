@@ -1,5 +1,6 @@
 import torch
 from data.build import make_data_loader
+from data.evaluation import evaluate
 
 
 @torch.no_grad()
@@ -7,9 +8,7 @@ def inference(model, data_loader, device):
     results = {}
     for batch_idx, (images, targets, image_ids) in enumerate(data_loader):
         images = images.to(device)
-        targets = targets.to(device)
-        print(f"batch idx: {batch_idx}")
-        outputs = model(images) # Container(boxes, scores, labels) = model(images)
+        outputs = model(images)  # Container(boxes, scores, labels) = model(images)
 
         results.update({int(image_id): output for image_id, output in zip(image_ids, outputs)})
     return results
@@ -31,9 +30,7 @@ def do_evaluation(cfg, model, **kwargs):
     eval_results = []
     for test_dataset_name, test_dataloader in zip(cfg.TEST, test_dataloaders):
         print("Start Inference")
-        prediction = inference(model, test_dataloader, device)
-        # eval_result = evaluate(test_dataloader.dataset,prediction)
-        eval_results.append(prediction)
-        print(prediction)
-        exit(0)
+        predictions = inference(model, test_dataloader, device)
+        eval_result = evaluate(test_dataloader.dataset, predictions)
+        eval_results.append(eval_result)
     return eval_results

@@ -29,11 +29,11 @@ def test(cfg, args):
 
     print(model)
 
-    # ckp = torch.load('./checkpoints/model_final.pth', map_location=torch.device('cpu'))
-    # model.load_state_dict(ckp['model'])
-    # # -------------------------------------------------------------------------------------- #
-    # # 构建Dataloader
-    # # -------------------------------------------------------------------------------------- #
+    ckp = torch.load('./checkpoints/model_112500.pth', map_location=torch.device('cpu'))
+    model.load_state_dict(ckp['model'])
+    # -------------------------------------------------------------------------------------- #
+    # 构建Dataloader
+    # -------------------------------------------------------------------------------------- #
     # test_dataloader = make_data_loader(cfg, is_train=False)[0]
 
     # with torch.no_grad():
@@ -48,7 +48,7 @@ def test(cfg, args):
 
             
     #         exit()
-    # do_evaluation(cfg, model, iteration=0)
+    do_evaluation(cfg, model, iteration=0)
 
 if __name__ == '__main__':
     # -------------------------------------------------------------------------------------- #

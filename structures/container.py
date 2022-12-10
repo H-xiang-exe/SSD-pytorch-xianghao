@@ -1,3 +1,6 @@
+from typing import List, Tuple
+
+
 class Container(object):
     def __init__(self, *args, **kwargs):
         self._data_dict = dict(*args, **kwargs)
@@ -27,6 +30,29 @@ class Container(object):
     def to(self, device):
         for key, value in self._data_dict.items():
             self._data_dict[key] = value.to(device)
+        return self
+
+    def numpy(self):
+        for key,value in self._data_dict.items():
+            self._data_dict[key] = value.cpu().numpy()
+        return self
+    def resize(self, size):
+        """resize boxes
+
+        Args:
+            size(tuple[2]): [weight, height]
+
+        Returns:
+
+        """
+        img_weight = getattr(self, 'img_width', -1)
+        img_height = getattr(self, 'img_height', -1)
+        assert img_weight > 0 and img_height > 0
+        assert 'boxes' in self._data_dict
+        boxes = self._data_dict['boxes']  # corner former
+        new_width, new_height = size
+        boxes[:, 0::2] *= (new_width / img_weight)
+        boxes[:, 1::2] *= (new_height / img_height)
         return self
 
 

@@ -12,8 +12,8 @@ def evaluate(dataset, predictions, *args, **kwargs):
             prediction results for one image.
     """
     if isinstance(dataset, VOCDataset):
-        return voc_evaluation()
+        return voc_evaluation(dataset, predictions)
     elif isinstance(dataset, COCODataset):
-        return coco_evaluation()
+        return coco_evaluation(dataset, predictions)
     else:
         raise NotImplementedError

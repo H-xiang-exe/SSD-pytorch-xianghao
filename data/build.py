@@ -39,7 +39,7 @@ class BatchCollator(object):
 def make_data_loader(cfg, is_train=True):
     # 获得transform/target_transform
     transform = transforms.build_transform(is_train)
-    target_transform = transforms.build_target_transform(cfg)
+    target_transform = transforms.build_target_transform(cfg) if is_train else None
 
     # 获得数据集
     dataset_list = cfg.DATASETS.TRAIN
@@ -49,7 +49,7 @@ def make_data_loader(cfg, is_train=True):
     is_shuffle = is_train
     for dataset in datasets:
         dataloader = DataLoader(dataset, batch_size=cfg.SOLVER.BATCH_SIZE, shuffle=is_shuffle,
-                                collate_fn=BatchCollator())
+                                collate_fn=BatchCollator(is_train))
         dataloaders.append(dataloader)
 
     if is_train:
