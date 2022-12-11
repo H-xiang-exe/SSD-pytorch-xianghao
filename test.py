@@ -29,8 +29,8 @@ def test(cfg, args):
 
     print(model)
 
-    ckp = torch.load('./checkpoints/model_112500.pth', map_location=torch.device('cpu'))
-    model.load_state_dict(ckp['model'])
+    # ckp = torch.load('./checkpoints/model_000003.pth', map_location=torch.device('cpu'))
+    # model.load_state_dict(ckp['model'])
     # -------------------------------------------------------------------------------------- #
     # 构建Dataloader
     # -------------------------------------------------------------------------------------- #
