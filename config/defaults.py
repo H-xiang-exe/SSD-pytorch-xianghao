@@ -37,7 +37,7 @@ _C.INPUT = CN()
 # Image size
 _C.INPUT.IMAGE_SIZE = 300
 # Values to be used for image normalization, RGB layout
-_C.INPUT.PIXEL_MEAN = (104, 117, 123)  # 顺序是RGB
+_C.INPUT.PIXEL_MEAN = (123, 117, 104)  # 顺序是RGB
 
 # ----------------------------------------------------------------------------------- #
 # DATASETS

@@ -4,23 +4,23 @@ from .target_transform import SSDTargetTransform
 from utils.prior_anchor import PriorAnchor
 
 
-def build_transform(is_train=True):
+def build_transform(cfg, is_train=True):
     if is_train:
         transform = [
             ConvertFromInts(),
             PhotometricDistort(),
-            Expand((104, 117, 123)),
+            Expand(cfg.INPUT.PIXEL_MEAN),
             RandomSampleCrop(),
             RandomMirror(),
             ToPersentCoords(),
-            Resize(size=300),
-            SubstractMeans((104, 117, 123)),
+            Resize(cfg.INPUT.IMAGE_SIZE),
+            SubstractMeans(cfg.INPUT.PIXEL_MEAN),
             ToTensor()
         ]
     else:
         transform = [
-            Resize(size=300),
-            SubstractMeans((104, 117, 123)),
+            Resize(cfg.INPUT.IMAGE_SIZE),
+            SubstractMeans(cfg.INPUT.PIXEL_MEAN),
             ToTensor()
         ]
     transform = Compose(transform)

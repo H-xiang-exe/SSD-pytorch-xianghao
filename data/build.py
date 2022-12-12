@@ -38,7 +38,7 @@ class BatchCollator(object):
 
 def make_data_loader(cfg, is_train=True):
     # 获得transform/target_transform
-    transform = transforms.build_transform(is_train)
+    transform = transforms.build_transform(cfg, is_train)
     target_transform = transforms.build_target_transform(cfg) if is_train else None
 
     # 获得数据集

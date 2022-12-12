@@ -25,6 +25,7 @@ class Compose(object):
             img, boxes, labels = t(img, boxes, labels)
         return img, boxes, labels
 
+
 class ToPersentCoords(object):
     def __call__(self, image, boxes=None, labels=None):
         """
@@ -110,13 +111,17 @@ class RandomContrast(object):
 class ConvertColor(object):
     """图像色彩空间的转换: RGB, HSV"""
 
-    def __init__(self, current='BGR', transform='HSV'):
+    def __init__(self, current, transform):
         self.transform = transform
         self.current = current
 
     def __call__(self, image, boxes=None, labels=None):
-        if self.current == 'BGR' and self.transform == 'HSV':
+        if self.current == 'RGB' and self.transform == 'HSV':
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+        elif self.current == 'BGR' and self.transform == 'HSV':
             image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        elif self.current == 'HSV' and self.transform == 'RGB':
+            image = cv2.cvtColor(image, cv2.COLOR_HSV2RGB)
         elif self.current == 'HSV' and self.transform == 'BGR':
             image = cv2.cvtColor(image, cv2.COLOR_HSV2BGR)
         else:
@@ -198,11 +203,11 @@ class PhotometricDistort(object):
 
     def __init__(self):
         self.pd = [RandomContrast(),  # 随机对比度
-                   ConvertColor(transform='HSV'),  # 色彩空间转换 BGR->HSV
-                   RandomSaturation(),  # 随机饱和度
-                   RandomHue(),  # 随机色调
-                   # 转换色彩空间 HSV -> BGR
-                   ConvertColor(current='HSV', transform='BGR'),
+                   ConvertColor(current='RGB', transform='HSV'),  # 色彩空间转换 RGB>HSV
+                   RandomSaturation(),  # 随机饱和度 HSV
+                   RandomHue(),  # 随机色调 HSV
+                   # 转换色彩空间 HSV -> RGB
+                   ConvertColor(current='HSV', transform='RGB'),
                    RandomContrast()  # 随机对比度
                    ]
         self.rand_brightness = RandomBrightness()  # 随机亮度
