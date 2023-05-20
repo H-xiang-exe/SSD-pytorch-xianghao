@@ -66,10 +66,10 @@ class MultiBoxLoss(nn.Module):
 
         # Sum of losses: L(x,c,l,g)= ( L_conf(x,c) + alpha * L_loc(x,l,g) )/N
         num_positive = positive_mask.sum()
-        
-        loc_loss = reg_loss/ num_positive
+
+        loc_loss = reg_loss / num_positive
         con_loss = cls_loss / num_positive
-        
+
         import math
         if math.isnan(loc_loss) or math.isnan(con_loss):
             print(f"num_positive:{num_positive}")
